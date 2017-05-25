@@ -6,12 +6,18 @@ class Project(object):
 
 
 
-    def __init__(self, generalData,totalData,inverterData,cleaningData,ExtraData):
+    def __init__(self, generalData,totalData,inverterData,cleaningData,ExtraData,adresData):
         self.name = generalData[0]
         self.projectOrientation=generalData[1]
         self.projectInclination=generalData[2]
         self.projectLatitude=generalData[3]
         self.projectLongitude=generalData[4]
+
+        self.contactPerson = adresData[0]
+        self.street = adresData[1]
+        self.city = adresData[2]
+        self.telephoneNumber = adresData[3]
+
 
         self.total=totalData[0]
         self.totalkw=totalData[1]
@@ -42,4 +48,5 @@ class Project(object):
                 listOfDF.append(DL.fetchFilesforInverter(path,col-1,inverterType))
         i+=1
         self.inverterData = pd.concat(listOfDF,axis=1,ignore_index=False)
-        return None
+
+

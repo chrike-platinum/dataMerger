@@ -7,8 +7,8 @@ from project import Project
 
 
 
-def createProject(generalData,totalData,inverterData,cleaningData,ExtraData):
-    project = Project(generalData,totalData,inverterData,cleaningData,ExtraData)
+def createProject(generalData,totalData,inverterData,cleaningData,ExtraData,adresData):
+    project = Project(generalData,totalData,inverterData,cleaningData,ExtraData,adresData)
     project.updateInverterData()
     return project
 

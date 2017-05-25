@@ -58,7 +58,7 @@ def returnAverageRainData(beginDate,endDat,lat,lng):
 
 def getkWhPerDay(dataList):
     dataList[1].index = pd.to_datetime(dataList[1].index)
-    DFList = [group[1] for group in dataList[1].groupby(dataList[1].index.day)]
+    DFList = [group[1] for group in dataList[1].groupby(dataList[1].index.date)]
 
     resultList = []
     dates=[]

@@ -279,6 +279,9 @@ def path2url(path):
       'file:', urllib.pathname2url(path))
 
 def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
+        TitelTxt = Div(text="""<p style="font-size:30px"> Rainy days: """+str(project.name),
+        width=300, height=30)
+
 
 
         p = figure(width=1200, height=500,title=project.name+': global overview kW',x_axis_type='datetime',x_axis_label='Time',y_axis_label='kW')
@@ -357,6 +360,7 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
         cleaningLabels = p.circle(x=shiftedCleaningDates,y=[dfMax]*NrOfDates,line_color='orange',line_width=15,legend='cleaning')
 
 
+
 ####ADD check box
         checkbox = CheckboxGroup(labels=["meteo", "Cleaning"],
                                  active=[1,1,1], width=100)
@@ -425,6 +429,7 @@ def goToHomescreen():
 
 def collectData():
     generalData = [str(x.value) for x in [projectNameTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude]]
+    adresData = [str(x.value) for x in [projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt]]
     totalData = [str(x.value) for x in [total,totalkw,totAvg,totExtra]]
     inverter1Data =[str(x.value) for x in [inverter1Type,inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra,filePick1,fileColumn1] ]
     inverter2Data = [str(x.value) for x in [inverter2Type,inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra,filePick2,fileColumn2]]
@@ -432,7 +437,9 @@ def collectData():
     cleaningData = [pd.to_datetime(x.value) for x in [cleaningDate]]
     ExtraData = extraComments.value
 
-    project = PE.createProject(generalData,totalData,InverterData,cleaningData,ExtraData)
+
+    project = PE.createProject(generalData,totalData,InverterData,cleaningData,ExtraData,adresData)
+    print('street',project.street)
     inputData=(project.name,project.inverterData)
 
     kWhPerDay = CE.getkWhPerDay(inputData)
@@ -454,6 +461,7 @@ def collectData():
 def createNewProjectScreen(quickReport=False):
     global globNewLayout
     global projectNameTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
+    global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt
     global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra,filePick2
     global cleaningDate,extraComments
     div0 = Div(text="""<hr noshade size=4 color=green>""",
@@ -462,6 +470,15 @@ def createNewProjectScreen(quickReport=False):
 
 
     projectNameTxt = TextInput(value="NDC", title="Project name:")
+
+    projectContactTxt = TextInput(value="Jan", title="Contact person:")
+    projectStreetTxt = TextInput(value="Kerkstraat 20", title="Street + nr:")
+    projectCityTxt = TextInput(value="Santiago Chile", title="City (+ Country):")
+    projectTelephoneTxt = TextInput(value="04 56 67 48", title="Telephone:")
+
+    div0 = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=30)
+
     projectOrientation =TextInput(value="0", title="Project orientation:")
     projectInclination = TextInput(value="0", title="Project inclination:")
     projectLatitude = TextInput(value="-33.447487", title="Project latitude:")
@@ -491,9 +508,9 @@ def createNewProjectScreen(quickReport=False):
     inverter1Avg = TextInput(value="", title="Inverter 1 average daily:")
     inverter1Extra = TextInput(value="", title="Inverter 1 EXTRA:")
 
-    filePick1 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos/Inverter 1", title="Inverter 1 data:")
+    filePick1 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos2/Puratos/Inverter 1", title="Inverter 1 data:")
     fileColumn1 = TextInput(value="1", title="Inverter 1 column nr in file:")
-    filePick2 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos/Inverter 3", title="Inverter 2 data:")
+    filePick2 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos2/Puratos/Inverter 3", title="Inverter 2 data:")
     fileColumn2 = TextInput(value="", title="Inverter 2 column nr in file:")
 
     div3 = Div(text="""<hr noshade size=4 color=green>""",width=1000, height=30)
@@ -504,6 +521,9 @@ def createNewProjectScreen(quickReport=False):
     inverter2Totkw = TextInput(value="20", title="Inverter 2 installed cap [kW]:")
     inverter2Avg = TextInput(value="", title="Inverter 2 average daily:")
     inveter2Extra = TextInput(value="", title="Inverter 2 EXTRA:")
+
+    div4 = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=30)
 
     cleaningDate = TextInput(value="2017-05-06", title="Cleaning date:")
     extraComments = TextInput(value="Here is a comment...", title="Comments:")
@@ -519,7 +539,10 @@ def createNewProjectScreen(quickReport=False):
     else:
         nextButton = Button(label='Add project')
 
-    newLayout = [[projectNameTxt],[projectLatitude,projectLongitude],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],[],[div],[total,totalkw,totAvg,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra],[div3],[inverter2Type,filePick2,fileColumn2],[inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra],[cleaningDate],[extraComments],[nextButton,buttonBack]]
+    newLayout = [[projectNameTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],[],
+                 [div],[total,totalkw,totAvg,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra],
+                 [div3],[inverter2Type,filePick2,fileColumn2],[inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra],
+                 [div4],[cleaningDate],[extraComments],[nextButton,buttonBack]]
 
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
