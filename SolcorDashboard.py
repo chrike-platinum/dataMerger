@@ -38,6 +38,7 @@ import ProjectEngine as PE
 from bokeh.models.glyphs import Image
 from bokeh.charts import Horizon
 import math
+from bokeh.models import SingleIntervalTicker, LinearAxis
 
 
 
@@ -278,11 +279,63 @@ def path2url(path):
     return urlparse.urljoin(
       'file:', urllib.pathname2url(path))
 
+
+def createInfoBanner(project):
+        titleTxt = Div(text="""<p style="font-size:30px ;text-align: center"> """+str(project.name),
+        width=1200, height=20)
+
+        divBan = Div(text="""<hr noshade size=4 color=green>""",
+        width=1200, height=20)
+
+        titleBanner = column([titleTxt,divBan])
+
+        generalTxt = Div(text="""<u><p style="font-size:20px;text-align: center""> General information:""",
+        width=600, height=20)
+
+        contactTxt = Div(text="""<p style="font-size:14px > <span style="color:green;">Contact person:</span> """+str(project.contactPerson),
+        width=300, height=15)
+
+        addressTxt = Div(text="""<p style="font-size:14px"> Address: """+str(project.street)+" "+str(project.city),
+        width=300, height=15)
+
+        telephoneTxt = Div(text="""<p style="font-size:14px"> Telephone: """+str(project.telephoneNumber),
+        width=300, height=15)
+
+        CoorTxt = Div(text="""<p style="font-size:14px"> Longitude: """+str(project.projectLongitude)+" latitude: "+str(project.projectLatitude),
+        width=300, height=15)
+
+        generalInfo = column([generalTxt,contactTxt,addressTxt,telephoneTxt,CoorTxt])
+
+        siteTxt = Div(text="""<u><p style="font-size:20px;text-align: center""> Site information:""",
+        width=600, height=20)
+
+        installedCapTxt = Div(text="""<p style="font-size:14px"> Installed capacity: """+str(project.total)+" kWP",
+        width=300, height=15)
+
+        installedCapkWTxt = Div(text="""<p style="font-size:14px"> Installed capacity (year): """+str(project.totalkw)+" kWh",
+        width=300, height=15)
+
+        installationOrienTxt = Div(text="""<p style="font-size:14px"> Orient./Incl.: """+str(project.projectOrientation)+" ; "+str(project.projectInclination),
+        width=300, height=15)
+
+
+        siteInfo = column([siteTxt,installedCapTxt,installedCapkWTxt,installationOrienTxt])
+
+
+        allInfo = row([generalInfo,siteInfo])
+
+        endBan = Div(text="""<hr noshade size=4 color=green>""",
+        width=1200, height=20)
+
+        return column([titleBanner,allInfo,endBan])
+
+
+
+
+
 def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
-        TitelTxt = Div(text="""<p style="font-size:30px"> Rainy days: """+str(project.name),
-        width=300, height=30)
 
-
+        banner = createInfoBanner(project)
 
         p = figure(width=1200, height=500,title=project.name+': global overview kW',x_axis_type='datetime',x_axis_label='Time',y_axis_label='kW')
         p.title.text_font_size='15pt'
@@ -310,6 +363,7 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
         colorPool = cycle(lst)
         for inverter in project.inverterData.columns.values:
             p.line(x=df.index.values,y=df[inverter],legend=inverter,color=next(colorPool))
+
 
 
         #hp = Horizon(df,plot_width=800, plot_height=500,
@@ -387,7 +441,7 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
         width=1200, height=30)
 
         lay2 = row([p,checkbox])
-        graph1 = column([lay2,sidePanel,divX])
+        graph1 = column([banner,lay2,sidePanel,divX])
 
 
 ##################################################
@@ -405,8 +459,17 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
         width=300, height=30)
 
         totalKWhPerday = kWhPerDay.sum(axis=1)
-        totalKWhPerday.index = totalKWhPerday.index + pd.DateOffset(hours=12)
-        p2.line(x=totalKWhPerday.index.values,y=totalKWhPerday,color='red')
+        totalKWhPerday = totalKWhPerday.to_frame()
+        print('ttttttttt',totalKWhPerday)
+        totalKWhPerday.index = pd.to_datetime(totalKWhPerday.index) + pd.DateOffset(hours=12)
+        print('col',totalKWhPerday.columns)
+        print('ttttttttt2',totalKWhPerday)
+        #p2.line(x=totalKWhPerday.index.values,y=totalKWhPerday,color='red')
+
+
+
+        hp = Horizon(totalKWhPerday,plot_width=1200, plot_height=500,
+             title="horizon plot using stock inputs")
 
 
 
@@ -414,8 +477,7 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
 
 
 
-
-        globalLayout = column([graph1,p2])
+        globalLayout = column([graph1,hp])
 
         globNewLayout.children = []
         globNewLayout.children =[globalLayout]
@@ -439,11 +501,12 @@ def collectData():
 
 
     project = PE.createProject(generalData,totalData,InverterData,cleaningData,ExtraData,adresData)
-    print('street',project.street)
     inputData=(project.name,project.inverterData)
 
     kWhPerDay = CE.getkWhPerDay(inputData)
     totalkWh = CE.getTotalkWh(inputData)
+
+
 
 
     projectDateBeginString=str(projectDateBegin.value)
@@ -483,7 +546,7 @@ def createNewProjectScreen(quickReport=False):
     projectInclination = TextInput(value="0", title="Project inclination:")
     projectLatitude = TextInput(value="-33.447487", title="Project latitude:")
     projectLongitude = TextInput(value="-70.673676", title="Project longitude:")
-    projectDateBegin = TextInput(value="2017-05-01 00:00:00", title="Begin date report:")
+    projectDateBegin = TextInput(value="2017-04-07 00:00:00", title="Begin date report:")
     projectDateEnd = TextInput(value="2017-05-07 23:45:00", title="End date report:")
 
     div = Div(text="""<hr noshade size=4 color=green>""",
