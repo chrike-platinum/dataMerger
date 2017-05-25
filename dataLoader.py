@@ -1,0 +1,162 @@
+__author__ = 'christiaan'
+import pandas as pd
+from os import listdir
+from os.path import isfile, join
+import re
+import matplotlib.pyplot as plt
+import os
+
+DirPath= '/Users/christiaan/Desktop/Solcor/dataMergeProject/'
+
+DirPath2= '/Users/christiaan/Desktop/Solcor/dataMergeProject/Puratos/'
+
+
+
+def searchStartingRowCSV(dataPath,fileName):
+    df = pd.read_csv(dataPath+'/'+fileName, sep=';', encoding='latin1', parse_dates=False,index_col=0,header=None)
+    df=df.dropna(axis=1,how='all')
+    inverterName = None
+    if 'filetype' in str(df.index.values[0]).lower():
+        inverterName = str(df.index.values[0].split()[1])
+    if 'serial' in str(df.index.values[2]).lower():
+        inverterName = inverterName+ str(df.index.values[2].split()[1])
+    df = df.ix[:,1]
+    l=df.index.str.count(':').tolist()
+    max1 = max(l)
+    beginRow = l.index(max1)-1
+    print('beginRow',beginRow)
+    dateIncluded = False
+    if (len(df.index.values[beginRow+1]) < 13):
+        print('searching for date in file name...')
+    else:
+        dateIncluded = True
+    return beginRow,dateIncluded,inverterName
+
+def importCSVFile(dataPath,fileName):
+    start,dateIncluded,inverterName = searchStartingRowCSV(dataPath,fileName)
+    df = pd.read_csv(dataPath+'/'+fileName, sep=';', encoding='latin1', parse_dates=True,index_col=0,skiprows=start)
+    df=df.dropna(axis=1,how='all')
+    ###Extend short dataframes
+    dateDF = str(df.index.values[0])[:10]
+    if dateIncluded:
+        ix = pd.DatetimeIndex(start=dateDF+" 00:00:00", end=dateDF+" 23:45:00", freq='15Min')
+        df = df.resample('15Min').mean().ffill().reindex(ix).fillna(0)
+    else:
+        try:
+            date = re.search("([0-9]{4}\-[0-9]{2}\-[0-9]{2})", fileName).group(1)
+            print('date found: '+date)
+            ix = pd.DatetimeIndex(start=date+" 00:00:00", end=date+" 23:45:00", freq='15Min')
+            df = df.resample('15Min').mean().ffill().set_index(ix).fillna(0)
+
+        except:
+            print("No date found in file name!!! Used sampleDate of today ")
+
+
+
+    if (len([col for col in df.columns if 'pac' in col.lower()]) >=1):
+        spike_cols = [col for col in df.columns if 'pac' in col.lower()]
+        df = df[spike_cols]
+    if (inverterName != None):
+       print('Renaming column')
+       df = df.rename(columns = {df.columns[0]:inverterName+' '+df.columns[0]})
+    test1=len([col for col in df.columns if '(w)' in col.lower()])
+    test2=len([col for col in df.columns if '[w]' in col.lower()])
+    if(test1+test2>0):
+        df=df/1000
+        df = df.add_suffix('[kW]')
+    return df
+
+def combineAllData(listOfDataFrames):
+    return pd.concat(listOfDataFrames)
+
+def importAllFilesFromFolder(mypath):
+    listOfFileNames = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+    list = []
+    for file in listOfFileNames:
+        list.append(importCSVFile(mypath,file))
+    return list
+
+def fetchFilesforProject(folderPath):
+    projectName = os.path.basename(os.path.normpath(folderPath))
+    listofFolders = [x[0] for x in os.walk(folderPath)]
+    if(len(listofFolders)>1):
+        listofFolders = listofFolders[1:]
+
+    print(listofFolders)
+    dataFramelist=[]
+    headlist =[]
+    for i in listofFolders:
+        #foldername = os.path.basename(os.path.normpath(i))
+        combinedDf =combineAllData(importAllFilesFromFolder(i))
+        combinedDf.index = pd.to_datetime(combinedDf.index)
+        dataFramelist.append(combinedDf)
+
+    df = pd.concat(dataFramelist,axis=1,ignore_index=False)
+    df.index = pd.to_datetime(df.index)
+    result=(projectName, df)
+
+    return result
+
+def fetchFilesforInverter(folderPath,colNr,inverterName):
+    listofFolders = [x[0] for x in os.walk(folderPath)]
+    if(len(listofFolders)>1):
+        listofFolders = listofFolders[1:]
+
+    print(listofFolders)
+    dataFramelist=[]
+    for i in listofFolders:
+        #foldername = os.path.basename(os.path.normpath(i))
+        combinedDf =combineAllData(importAllFilesFromFolder(i))
+        combinedDf.index = pd.to_datetime(combinedDf.index)
+        newdf = combinedDf[combinedDf.columns[colNr]].to_frame()
+        newdf.columns = [inverterName]
+        newdf.index=pd.to_datetime(combinedDf.index)
+        dataFramelist.append(newdf)
+
+
+
+    df = pd.concat(dataFramelist,axis=1,ignore_index=False)
+    #df.index = pd.to_datetime(df.index)
+    result = df
+
+    return df
+
+
+
+
+dataFileName1 = 'Ingeteam 33TL Puratos Inv 1.csv'
+dataFileName2 = 'Ingeteam 33TL Puratos Inv 2.csv'
+dataFileName3 = 'Ingeteam 33TLM Puratos Inv 3.csv'
+dataFileName4 = 'SMA 25000TL30 Gabriel Varela.csv'
+dataFileName5 = 'SMA 25000TL30-20000TL30 NDC.csv'
+datFileDate = '16-02-2014 jlasdkljlsj.csv'
+dataFileName10 = 'Inverter_Day_2017-05-01.csv'
+newPath = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Nueces del Choapa'
+newPath2 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/gabriel Varela'
+newPath3 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos'
+dataFileName11='170503_003.csv'
+
+
+
+
+#print(importCSVFile(newPath,dataFileName10))
+#df=combineAllData(importAllFilesFromFolder(newPath))
+#print(df)
+#print(fetchFilesforProject(newPath3))
+#plt.plot(df)
+#plt.show()
+
+
+
+
+
+
+
+
+
+def SelectTimeFrameData(timeseries,beginDate,endDate):
+    print("Selecting time period...")
+    df = timeseries[beginDate:endDate]
+    #mask = is_leap_and_29Feb(df)
+    #f = df.loc[~mask]
+    return df
