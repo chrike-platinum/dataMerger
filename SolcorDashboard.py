@@ -1,4 +1,5 @@
 __author__ = 'christiaan'
+# -*- coding: utf-8 -*-
 
 from bokeh.client import push_session
 from random import random
@@ -270,8 +271,7 @@ def showProjectMenu(TotalData,means,magnification,kWhPerDay,totalkWh,rain):
 
 
 
-########
-        #############
+#####################
 
 import urlparse, urllib
 
@@ -280,43 +280,59 @@ def path2url(path):
       'file:', urllib.pathname2url(path))
 
 
-def createInfoBanner(project):
-        titleTxt = Div(text="""<p style="font-size:30px ;text-align: center"> """+str(project.name),
+def createReadableDate(date):
+    date = pd.to_datetime(date)
+    date = date.date()
+    date = datetime.datetime.strptime(str(date), '%Y-%m-%d').strftime('%d/%m/%Y')
+    return date
+
+
+
+
+def createInfoBanner(project,projectDateBeginString,projectDateEndString):
+        projectDateBeginString=createReadableDate(projectDateBeginString)
+        projectDateEndString=createReadableDate(projectDateEndString)
+        titleTxt = Div(text="""<p style="font-size:38px ;text-align: center"> """+str(project.name),
         width=1200, height=20)
+        dateTxt = Div(text="""<p style="font-size:30px ;text-align: center"> """+projectDateBeginString+" - "+projectDateEndString,
+        width=1200, height=20)
+
+
+
 
         divBan = Div(text="""<hr noshade size=4 color=green>""",
-        width=1200, height=20)
+        width=1200, height=10)
 
-        titleBanner = column([titleTxt,divBan])
+        titleBanner = column([titleTxt,dateTxt,divBan])
 
         generalTxt = Div(text="""<u><p style="font-size:20px;text-align: center""> General information:""",
-        width=600, height=20)
+        width=600, height=15)
 
-        contactTxt = Div(text="""<p style="font-size:14px > <span style="color:green;">Contact person:</span> """+str(project.contactPerson),
-        width=300, height=15)
+        contactTxt = Div(text="""<p style="font-size:16px">Contact person: """+str(project.contactPerson),
+        width=600, height=15)
 
-        addressTxt = Div(text="""<p style="font-size:14px"> Address: """+str(project.street)+" "+str(project.city),
-        width=300, height=15)
+        addressTxt = Div(text="""<p style="font-size:16px"> Address: """+str(project.street)+" "+str(project.city),
+        width=600, height=15)
 
-        telephoneTxt = Div(text="""<p style="font-size:14px"> Telephone: """+str(project.telephoneNumber),
-        width=300, height=15)
+        telephoneTxt = Div(text="""<p style="font-size:16px"> Telephone: """+str(project.telephoneNumber),
+        width=600, height=15)
 
-        CoorTxt = Div(text="""<p style="font-size:14px"> Longitude: """+str(project.projectLongitude)+" latitude: "+str(project.projectLatitude),
-        width=300, height=15)
+        CoorTxt = Div(text="""<p style="font-size:16px"> Longitude/latitude: """+str(project.projectLongitude)+"° / "+str(project.projectLatitude)+'°',
+        width=600, height=15)
 
         generalInfo = column([generalTxt,contactTxt,addressTxt,telephoneTxt,CoorTxt])
 
         siteTxt = Div(text="""<u><p style="font-size:20px;text-align: center""> Site information:""",
         width=600, height=20)
 
-        installedCapTxt = Div(text="""<p style="font-size:14px"> Installed capacity: """+str(project.total)+" kWP",
-        width=300, height=15)
+        installedCapTxt = Div(text="""<p style="font-size:16px"> Installed capacity: """+str(project.totalkWP)+" kWP",
+        width=600, height=15)
 
-        installedCapkWTxt = Div(text="""<p style="font-size:14px"> Installed capacity (year): """+str(project.totalkw)+" kWh",
-        width=300, height=15)
+        installedCapkWTxt = Div(text="""<p style="font-size:16px"> Installed capacity (year): """+str(project.totalkw)+" kWh",
+        width=600, height=15)
 
-        installationOrienTxt = Div(text="""<p style="font-size:14px"> Orient./Incl.: """+str(project.projectOrientation)+" ; "+str(project.projectInclination),
-        width=300, height=15)
+        installationOrienTxt = Div(text="""<p style="font-size:16px"> Orient./Incl.: """+str(project.projectOrientation)+"° / "+str(project.projectInclination)+'°',
+        width=600, height=15)
 
 
         siteInfo = column([siteTxt,installedCapTxt,installedCapkWTxt,installationOrienTxt])
@@ -324,20 +340,71 @@ def createInfoBanner(project):
 
         allInfo = row([generalInfo,siteInfo])
 
-        endBan = Div(text="""<hr noshade size=4 color=green>""",
-        width=1200, height=20)
-
-        return column([titleBanner,allInfo,endBan])
 
 
+        return column([titleBanner,allInfo])
+
+def createInfoPart(project,title,listTitleLeft,listLeft,listTitleRight,listRight):
+    divTitle = Div(text="""<p style="font-size:28px ;text-align: center"> """+title,
+        width=1200, height=16)
+    divLine = Div(text="""<hr noshade size=4 color=green>""",
+        width=1200, height=10)
+
+
+    divTitleLeft = Div(text="""<u><p style="font-size:20px;text-align: center""> """+listTitleLeft,
+        width=600, height=20)
+
+    divListLeft = [divTitleLeft]
+    for info in listLeft:
+        divListLeft.append(Div(text="""<p style="font-size:16px"> """+str(info[0])+": "+str(info[1]),
+        width=600, height=15))
+
+    leftInfoList = column(divListLeft)
+
+    divTitleRight = Div(text="""<u><p style="font-size:20px;text-align: center""> """+listTitleRight,
+        width=600, height=20)
+
+
+    divListRight = [divTitleRight]
+    for info in listRight:
+        divListRight.append(Div(text="""<p style="font-size:16px"> """+str(info[0])+": "+str(info[1]),
+        width=600, height=15))
+
+
+    rightInfoList = column(divListRight)
+
+
+    allInfo = row([leftInfoList,rightInfoList])
+    return column([divTitle,divLine,allInfo])
 
 
 
-def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
 
-        banner = createInfoBanner(project)
 
-        p = figure(width=1200, height=500,title=project.name+': global overview kW',x_axis_type='datetime',x_axis_label='Time',y_axis_label='kW')
+def createInverterPlots(inverterID,kWhPerDay,project):
+    p3 = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kWh')
+    p3.title.text_font_size='15pt'
+    p3.xaxis.major_label_orientation = math.pi/4
+
+    p3.xaxis.formatter=DatetimeTickFormatter(
+        hours=["%d %B %Y"],
+        days=["%d %B %Y"],
+        months=["%d %B %Y"],
+        years=["%d %B %Y"],
+            )
+
+    p3.line()
+    return None
+
+
+
+
+
+def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString):
+
+        banner = createInfoBanner(project,projectDateBeginString,projectDateEndString)
+
+        p = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kW')
         p.title.text_font_size='15pt'
 
 
@@ -355,7 +422,7 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
 ####ADD kW DATA
         df = project.inverterData
         dfMax=df.max().max()
-        p.y_range=Range1d(-0.5, 1.3*dfMax)
+        p.y_range=Range1d(-0.5, 1.4*dfMax)
 
 
 
@@ -371,12 +438,7 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
 
 
 #####ADD Cloud DATA
-        print('cloudData',cloudData)
         amountOfCloudDays = len([x for x in cloudData if x >= cloudyDaythresholdPercentage])
-
-        amountOfCloudyDaysTxt = Div(text="""<p style="font-size:20px"> Cloudy days: """+str(amountOfCloudDays),
-        width=300, height=30)
-
         cloudDataShiftIndex = cloudData.index + pd.DateOffset(hours=12)
 
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
@@ -394,8 +456,6 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
 #######ADD RAIN DATA
 
         amountOfRainDays = len([x for x in rain if x >= rainyDaythresholdPercentage])
-        amountOfRainyDaysTxt = Div(text="""<p style="font-size:20px"> Rainy days: """+str(amountOfRainDays),
-        width=300, height=30)
         rainDataShiftIndex = rain.index + pd.DateOffset(hours=12)
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
         rainLabel = [str(int(round(100*(x),0)))+'%' for x in rain.values.tolist()]
@@ -406,6 +466,12 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
 
         rainLabels = LabelSet(x='x', y='y', text='names', level='glyph',x_offset=-5, y_offset=14*(1.05*dfMax),source=rainSource, render_mode='canvas',text_font_size="10pt",text_color='blue')
         p.add_layout(rainLabels)
+######fill info banner
+        leftlist = [('Number of cloudy days',amountOfCloudDays),('Number of rainy days',amountOfRainDays)]
+
+        cleaningDatesString=[createReadableDate(str(cleaning.date())) for cleaning in project.cleaningDates]
+        rightlist = [('Cleaning dates',str(cleaningDatesString))]
+        inf = createInfoPart(project,'Global overview kW:','Weather information:',leftlist,'Maintenance information:',rightlist)
 
 
 ####ADD kuis DATA
@@ -417,7 +483,7 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
 
 ####ADD check box
         checkbox = CheckboxGroup(labels=["meteo", "Cleaning"],
-                                 active=[1,1,1], width=100)
+                                 active=[0,1], width=100)
         checkbox.callback = CustomJS(args=dict(line0=cloudLabels,line1=cleaningLabels, line2=rainLabels), code="""
             //console.log(cb_obj.active);
             line0.visible = false;
@@ -435,55 +501,100 @@ def showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain):
             """)
 
         p.legend.orientation = "horizontal"
-        p.legend.location=(0,16*dfMax)
-        sidePanel = column(children=[amountOfCloudyDaysTxt,amountOfRainyDaysTxt])
-        divX = Div(text="""<hr noshade size=4 color=green>""",
-        width=1200, height=30)
+        p.legend.location=(0,15.5*dfMax)
+        p.xaxis[0].ticker=DatetimeTicker(desired_num_ticks=len(cloudData))
+
 
         lay2 = row([p,checkbox])
-        graph1 = column([banner,lay2,sidePanel,divX])
+        globalkWGraph = column([banner,inf,lay2])
 
 
 ##################################################
 
-        p2 = figure(width=1200, height=500,title=project.name+': global overview kWh & kWh/kWP',x_axis_type='datetime',x_axis_label='Time',y_axis_label='kW')
-        p.title.text_font_size='15pt'
+        p2 = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kWh')
+        p2.title.text_font_size='15pt'
+        p2.xaxis.major_label_orientation = math.pi/4
+
+        p2.xaxis.formatter=DatetimeTickFormatter(
+        hours=["%d %B %Y"],
+        days=["%d %B %Y"],
+        months=["%d %B %Y"],
+        years=["%d %B %Y"],
+            )
 
 
-        #####ADD kWH DATA
 
-        TotalkWhText = Div(text="""<p style="font-size:20px"> Total: """+str(int(round(totalkWh)))+""" kWh.""",
-        width=300, height=30)
+        #####ADD kWh DATA
 
-        TotalkWhText2 = Div(text="""<p style="font-size:20px"> Avg/day: """+str(int(round(totalkWh/len(kWhPerDay.index.values))))+""" kWh.""",
-        width=300, height=30)
 
         totalKWhPerday = kWhPerDay.sum(axis=1)
+
         totalKWhPerday = totalKWhPerday.to_frame()
-        print('ttttttttt',totalKWhPerday)
-        totalKWhPerday.index = pd.to_datetime(totalKWhPerday.index) + pd.DateOffset(hours=12)
-        print('col',totalKWhPerday.columns)
-        print('ttttttttt2',totalKWhPerday)
-        #p2.line(x=totalKWhPerday.index.values,y=totalKWhPerday,color='red')
+        totalKWhPerday.columns = ['kWh']
+        totalKWhPerday.index = pd.to_datetime(totalKWhPerday.index) #+ pd.DateOffset(hours=12)
+        df = totalKWhPerday
+        dfMaxkWh=df.max().max()
+        dfMaxkWhkWP=(df/project.totalkWP).max().max()
+        yValues=df[df.columns[0]]
+
+        p2.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
+
+        p2.line(x=df.index.values,y=yValues,legend='kWh',color='blue')
+        p2.yaxis.axis_label_text_color = "blue"
+        p2.extra_y_ranges = {"etxraAxis": Range1d(start=0, end=2*dfMaxkWhkWP)}
+        p2.add_layout(LinearAxis(y_range_name="etxraAxis",axis_label='kWh/kWP',axis_label_text_color='green'), 'right')
+
+        p2.xaxis[0].ticker=DatetimeTicker(desired_num_ticks=len(cloudData))
+
+
+        ###ADD Averages
+        yvaluesAVG = [project.totAvg]*len(yValues)
+        p2.line(x=df.index.values,y=yvaluesAVG,legend='Exp. Avg. kWh',color='lightblue',line_width=2)
+        p2.line(x=df.index.values,y=yValues/project.totalkWP,legend='kWh/kWP',color='green',y_range_name="etxraAxis")
+
+        yValueskWP=[x/project.totalkWP for x in yvaluesAVG]
+        p2.line(x=df.index.values,y=yValueskWP,legend='Exp. Avg. kWh/kWP',y_range_name="etxraAxis",color='lightgreen',line_width=2)
+        p2.legend.orientation = "horizontal"
+
+        ###Performance indicators
+
+        totalGenerated = totalkWh
+        ExpectedValue = project.totAvg*len(cloudData)
+        monthly_performance = int((totalGenerated/ExpectedValue)*100)
+
+        underperfDays = sum([1 if x<project.totAvg else 0 for x in totalKWhPerday[totalKWhPerday.columns[0]]])
+        overperfDays = sum([1 if x>=project.totAvg else 0 for x in totalKWhPerday[totalKWhPerday.columns[0]]])
 
 
 
-        hp = Horizon(totalKWhPerday,plot_width=1200, plot_height=500,
-             title="horizon plot using stock inputs")
+
+        leftlist = [('Monthly performance',str(monthly_performance)+'%'),('Total generated',str(int(round(totalGenerated)))+' kWh'),
+                     ('Expected generation',str(int(round(ExpectedValue)))+ 'kWh'),('Total generated/kWP',str(int(round(totalGenerated/project.totalkWP)))+' kWh/kWP')]
+        rightlist = [('Real average generation/day',str(int(round(totalkWh/len(kWhPerDay.index.values))))+' kWh'),('Expected averaged generation/day',str(int(project.totAvg))+' kWh'),
+                     ('Number of underperforming days',underperfDays),('Number of overperforming days',overperfDays)]
+        info2div = createInfoPart(project,'Global overview kWh & kWh/kWP:','Performance indicators:',leftlist,'Performance indicators:',rightlist)
+
+        GlobalKwhGraph=column(info2div,p2)
+
+#########INVERTERGRAPH
 
 
+        '''
+        inverterGraphs =[]
+        inverterID=0
+        for inverterkW in project.inverterTypes:
+            inverterGraphs.append(createInverterPlots(inverterID,kWhPerDay,project))
+            inverterID+=1
+        '''
 
-
-
-
-
-        globalLayout = column([graph1,hp])
+        globalLayout = column([globalkWGraph,GlobalKwhGraph])
 
         globNewLayout.children = []
         globNewLayout.children =[globalLayout]
 
 
-
+        #file = ioa.save(curdoc())
+        #print('file',file)
 
 
 def goToHomescreen():
@@ -515,7 +626,7 @@ def collectData():
     cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
     rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
 
-    showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain)
+    showProjectScreen(project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
 
 
 
@@ -555,7 +666,7 @@ def createNewProjectScreen(quickReport=False):
 
     total = TextInput(value="46", title="Total installed cap [kWP]:")
     totalkw = TextInput(value="45", title="Total installed cap [kW]:")
-    totAvg = TextInput(value="", title="Total average daily:")
+    totAvg = TextInput(value="200", title="Total average daily:")
     totExtra = TextInput(value="", title="Total Extra:")
 
 
@@ -568,7 +679,7 @@ def createNewProjectScreen(quickReport=False):
 
     inverter1Tot = TextInput(value="25,5", title="Inverter 1 installed cap [kWP]:")
     inverter1Totkw = TextInput(value="25", title="Inverter 1 installed cap [kW]:")
-    inverter1Avg = TextInput(value="", title="Inverter 1 average daily:")
+    inverter1Avg = TextInput(value="200", title="Inverter 1 average daily:")
     inverter1Extra = TextInput(value="", title="Inverter 1 EXTRA:")
 
     filePick1 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos2/Puratos/Inverter 1", title="Inverter 1 data:")
@@ -582,7 +693,7 @@ def createNewProjectScreen(quickReport=False):
 
     inverter2Tot = TextInput(value="20,5", title="Inverter 2 installed cap [kWP]:")
     inverter2Totkw = TextInput(value="20", title="Inverter 2 installed cap [kW]:")
-    inverter2Avg = TextInput(value="", title="Inverter 2 average daily:")
+    inverter2Avg = TextInput(value="10", title="Inverter 2 average daily:")
     inveter2Extra = TextInput(value="", title="Inverter 2 EXTRA:")
 
     div4 = Div(text="""<hr noshade size=4 color=green>""",
