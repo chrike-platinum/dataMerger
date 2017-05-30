@@ -6,12 +6,16 @@ class Project(object):
 
 
 
-    def __init__(self, generalData,totalData,inverterData,cleaningData,ExtraData,adresData):
+    def __init__(self, generalData,geoData,totalData,inverterData,maintanceData,ExtraData,adresData):
         self.name = generalData[0]
         self.projectOrientation=generalData[1]
         self.projectInclination=generalData[2]
-        self.projectLatitude=generalData[3]
-        self.projectLongitude=generalData[4]
+        self.structureType=generalData[3]
+
+        self.projectLatitude = geoData[0]
+        self.projectLongitude = geoData[1]
+        self.projectLatitudeString = geoData[2]
+        self.projectLongitudeString = geoData[3]
 
         self.contactPerson = adresData[0]
         self.street = adresData[1]
@@ -36,12 +40,13 @@ class Project(object):
         self.inverterColumnNumbers=[int(x[6]) if x[6]!="" else 1 for x in inverterData]
 
 
-        self.cleaningDates=cleaningData
+        self.cleaningDates=maintanceData[0]
         self.commentList = ExtraData
 
-        self.gridProblemData=[]
-        self.maintenanceData = []
-        self.internetProblems=[]
+        self.gridProblemData=maintanceData[1]
+        self.maintenanceData = maintanceData[2]
+        self.internetProblems=maintanceData[3]
+
 
 
 
@@ -54,8 +59,13 @@ class Project(object):
         i=0
         listOfDF=[]
         for path,col,inverterType in zip(self.inverterFilePaths,self.inverterColumnNumbers,self.inverterTypes):
+                print('fetch')
                 listOfDF.append(DL.fetchFilesforInverter(path,col-1,inverterType))
+
         i+=1
         self.inverterData = pd.concat(listOfDF,axis=1,ignore_index=False)
+
+    def getInverterDatefromTo(self,beginDate,endDate):
+        return self.inverterData[beginDate:endDate]
 
 

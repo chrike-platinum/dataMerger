@@ -5,6 +5,7 @@ from os.path import isfile, join
 import re
 import matplotlib.pyplot as plt
 import os
+import glob
 
 DirPath= '/Users/christiaan/Desktop/Solcor/dataMergeProject/'
 
@@ -13,13 +14,17 @@ DirPath2= '/Users/christiaan/Desktop/Solcor/dataMergeProject/Puratos/'
 
 
 def searchStartingRowCSV(dataPath,fileName):
-    df = pd.read_csv(dataPath+'/'+fileName, sep=';', encoding='latin1', parse_dates=False,index_col=0,header=None)
+    if (dataPath.strip()[-1] =='/'):
+        df = pd.read_csv(dataPath+fileName, sep=';', encoding='latin1', parse_dates=False,index_col=0,header=None)
+    else:
+        df = pd.read_csv(dataPath+'/'+fileName, sep=';', encoding='latin1', parse_dates=False,index_col=0,header=None)
     df=df.dropna(axis=1,how='all')
     inverterName = None
     if 'filetype' in str(df.index.values[0]).lower():
         inverterName = str(df.index.values[0].split()[1])
     if 'serial' in str(df.index.values[2]).lower():
         inverterName = inverterName+ str(df.index.values[2].split()[1])
+
     df = df.ix[:,1]
     l=df.index.str.count(':').tolist()
     max1 = max(l)
@@ -34,6 +39,7 @@ def searchStartingRowCSV(dataPath,fileName):
 
 def importCSVFile(dataPath,fileName):
     start,dateIncluded,inverterName = searchStartingRowCSV(dataPath,fileName)
+
     df = pd.read_csv(dataPath+'/'+fileName, sep=';', encoding='latin1', parse_dates=True,index_col=0,skiprows=start)
     df=df.dropna(axis=1,how='all')
     ###Extend short dataframes
@@ -69,8 +75,10 @@ def importCSVFile(dataPath,fileName):
 def combineAllData(listOfDataFrames):
     return pd.concat(listOfDataFrames)
 
+
 def importAllFilesFromFolder(mypath):
     listOfFileNames = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+    listOfFileNames = [x for x in listOfFileNames if not x.startswith('.')]
     list = []
     for file in listOfFileNames:
         list.append(importCSVFile(mypath,file))
@@ -102,7 +110,7 @@ def fetchFilesforInverter(folderPath,colNr,inverterName):
     if(len(listofFolders)>1):
         listofFolders = listofFolders[1:]
 
-    print(listofFolders)
+
     dataFramelist=[]
     for i in listofFolders:
         #foldername = os.path.basename(os.path.normpath(i))
@@ -148,15 +156,36 @@ dataFileName11='170503_003.csv'
 
 
 
-
-
-
-
-
-
 def SelectTimeFrameData(timeseries,beginDate,endDate):
     print("Selecting time period...")
     df = timeseries[beginDate:endDate]
     #mask = is_leap_and_29Feb(df)
     #f = df.loc[~mask]
     return df
+
+
+def getIndexOfFirstOccurance(df,searchString):
+    searchCOlumn = df[df.columns[0]]
+    return searchCOlumn[searchCOlumn=='Month'].index[0]
+
+
+def collectSolargisData(filePath):
+    endColumn=5
+    endRow = 13
+    df_GHI = pd.read_excel(filePath, sheetname="GHI+Temp")
+    skips = getIndexOfFirstOccurance(df_GHI,'Month')
+    df_GHI = pd.read_excel(filePath, sheetname="GHI+Temp",skiprows=skips+1)
+    df_GHI = df_GHI[df_GHI.columns[0:endColumn]].head(n=endRow)
+
+
+    df_GII = pd.read_excel(filePath, sheetname="GII")
+    skips2=getIndexOfFirstOccurance(df_GII,'Month')
+    df_GII = pd.read_excel(filePath, sheetname="GII",skiprows=skips2+1)
+    df_GII = df_GII[df_GII.columns[0:endColumn]].head(n=endRow)
+
+    return df_GHI,df_GII
+
+name = 'NDC_PV-8627-1705-1780_-31.783--70.984.xls'
+path='/Users/christiaan/Desktop/Solcor/dataMergeWeek/'
+
+#collectSolargisData(path+name)

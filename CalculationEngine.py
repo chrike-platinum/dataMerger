@@ -2,6 +2,7 @@ __author__ = 'christiaan'
 
 from scipy.integrate import simps
 import solcorWeatherEngine as SWE
+import dataLoader as DL
 import pandas as pd
 
 
@@ -106,3 +107,23 @@ def returnAverageCloudData(beginDate,endDat,lat,lng):
     for dataframe in resultList:
         means.append(dataframe.resample('D').mean())
     return pd.concat(means)
+
+
+def collectSolarisData(path):
+    df_GHI,df_GII = DL.collectSolargisData(path)
+    #monthNr = pd.to_datetime(beginDate).month
+    df_GHI_column= df_GHI[df_GHI.columns[2]].to_frame()
+    df_GII_column =df_GII[df_GII.columns[2]].to_frame()
+    dfPercent_column = (df_GII_column[df_GII_column.columns[0]]/df_GHI_column[df_GHI_column.columns[0]]).to_frame()
+    df = pd.concat([df_GHI_column,df_GII_column,dfPercent_column],axis=1)
+    df.columns = [df.columns.values[0],df.columns.values[0],'percentageChange']
+    return df
+
+
+
+
+
+name = 'NDC_PV-8627-1705-1780_-31.783--70.984.xls'
+path='/Users/christiaan/Desktop/Solcor/dataMergeWeek/'
+collectSolarisData(path+name)
+#
