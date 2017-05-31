@@ -25,7 +25,7 @@ class Project(object):
 
         self.totalkWP=float(totalData[0].replace(',','.'))
         self.totalkw=float(totalData[1].replace(',','.'))
-        self.totAvg=float(totalData[2].replace(',','.'))
+        #self.totAvg=float(totalData[2].replace(',','.'))
         self.totExtra=totalData[3]
 
 
@@ -34,7 +34,7 @@ class Project(object):
         self.invertersTotKWP=[float(x[1].replace(',','.')) for x in inverterData]
 
         self.invertersTotkw=[float(x[2].replace(',','.')) for x in inverterData]
-        self.invertersAvg=[float(x[3].replace(',','.')) for x in inverterData]
+        #self.invertersAvg=[float(x[3].replace(',','.')) for x in inverterData]
         self.invertersExtra=[x[4] for x in inverterData]
         self.inverterFilePaths=[x[5] for x in inverterData]
         self.inverterColumnNumbers=[int(x[6]) if x[6]!="" else 1 for x in inverterData]
