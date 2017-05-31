@@ -110,13 +110,15 @@ def returnAverageCloudData(beginDate,endDat,lat,lng):
 
 
 def collectSolarisData(path):
-    df_GHI,df_GII = DL.collectSolargisData(path)
+    df_GHI,df_GII,df_PV = DL.collectSolargisData(path)
     #monthNr = pd.to_datetime(beginDate).month
     df_GHI_column= df_GHI[df_GHI.columns[2]].to_frame()
     df_GII_column =df_GII[df_GII.columns[2]].to_frame()
+    df_PV_column1 =df_PV[df_PV.columns[2]].to_frame()
+    df_PV_column2 =df_PV[df_PV.columns[1]].to_frame()
     dfPercent_column = (df_GII_column[df_GII_column.columns[0]]/df_GHI_column[df_GHI_column.columns[0]]).to_frame()
-    df = pd.concat([df_GHI_column,df_GII_column,dfPercent_column],axis=1)
-    df.columns = [df.columns.values[0],df.columns.values[0],'percentageChange']
+    df = pd.concat([df_GHI_column,df_GII_column,dfPercent_column,df_PV_column1,df_PV_column2],axis=1)
+    df.columns = [df.columns.values[0]+'_GHI',df.columns.values[1]+'_GII','percentageChange',df.columns.values[3]+' daily',df.columns.values[3]+' monthly']
     return df
 
 

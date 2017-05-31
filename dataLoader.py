@@ -171,11 +171,14 @@ def getIndexOfFirstOccurance(df,searchString):
 
 def collectSolargisData(filePath):
     endColumn=5
-    endRow = 13
+    endRow = 12
     df_GHI = pd.read_excel(filePath, sheetname="GHI+Temp")
     skips = getIndexOfFirstOccurance(df_GHI,'Month')
     df_GHI = pd.read_excel(filePath, sheetname="GHI+Temp",skiprows=skips+1)
+    #df_GHIYear = df_GHI[df_GHI.columns[2]][endRow]
     df_GHI = df_GHI[df_GHI.columns[0:endColumn]].head(n=endRow)
+
+
 
 
     df_GII = pd.read_excel(filePath, sheetname="GII")
@@ -183,9 +186,15 @@ def collectSolargisData(filePath):
     df_GII = pd.read_excel(filePath, sheetname="GII",skiprows=skips2+1)
     df_GII = df_GII[df_GII.columns[0:endColumn]].head(n=endRow)
 
-    return df_GHI,df_GII
+
+
+    df_PV = pd.read_excel(filePath, sheetname="PV")
+    skips3=getIndexOfFirstOccurance(df_PV,'Month')
+    df_PV = pd.read_excel(filePath, sheetname="PV",skiprows=skips3+1)
+    df_PV = df_PV[df_PV.columns[0:endColumn]].head(n=endRow)
+    return df_GHI,df_GII,df_PV
 
 name = 'NDC_PV-8627-1705-1780_-31.783--70.984.xls'
 path='/Users/christiaan/Desktop/Solcor/dataMergeWeek/'
 
-#collectSolargisData(path+name)
+collectSolargisData(path+name)

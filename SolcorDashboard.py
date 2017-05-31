@@ -329,7 +329,7 @@ def createInfoBanner(project,projectDateBeginString,projectDateEndString,reportN
         siteTxt = Div(text="""<u><p style="font-size:20px;text-align: center""> Site information:""",
         width=600, height=20)
 
-        installedCapTxt = Div(text="""<p style="font-size:16px"> Installed capacity: """+str(project.totalkWP)+" kWP",
+        installedCapTxt = Div(text="""<p style="font-size:16px"> Nominal installed capacity: """+str(project.totalkWP)+" kWP",
         width=600, height=15)
 
         installedCapkWTxt = Div(text="""<p style="font-size:16px"> Installed capacity (year): """+str(project.totalkw)+" kW",
@@ -427,7 +427,7 @@ def createInfoInverterPart(project,title,listTitleLeft,listLeft,listTitleRight,l
 
 
 
-def createInverterPlots(kWhPerDay,project):
+def createInverterPlots(kWhPerDay,project,projectDateBeginString):
 
     p3 = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kWh/kWP')
     plt.ylabel('kWh/kWP')
@@ -480,11 +480,19 @@ def createInverterPlots(kWhPerDay,project):
         ExpectedValue = project.invertersAvg[inverterID2]*project.invertersTotKWP[inverterID2]*len(kWhPerDay.index.values)
         monthly_performance = int((totalGenerated/ExpectedValue)*100)
 
-        leftlist = [('Monthly performance',str(monthly_performance)+'%'),('Total generation',str(int(round(totalGenerated)))+' kWh'),
-                     ('Expected generation',str(int(round(ExpectedValue)))+ ' kWh'),('Total daily average',str(int(round(totalGenerated/project.invertersTotKWP[inverterID2]/len(kWhPerDay.index.values))))+' kWh/kWP')]
+        month = datetime.datetime.strptime(projectDateBeginString,'%Y-%m-%d %H:%M:%S').month
 
-        rightlist=[('Inverter type',str(project.inverterTypes[inverterID2])),('Installed capacity',str(project.invertersTotkw[inverterID2])+' kW'),
-                   ('Nominal installed capacity',str(project.invertersTotKWP[inverterID2])+' kWP'),('Expected daily average',str(project.invertersAvg[inverterID2])+' kWh/kWP')]
+        percentage = round(project.getPercentageChange(month),2)
+        monthlyExpectedProductionHorizontal = round(project.getMonthlyAverageKWhKWp(month),2)
+        InplaneProduction=percentage*monthlyExpectedProductionHorizontal
+
+        PR = round((totalGenerated/project.invertersTotKWP[inverterID2])/InplaneProduction,3)*100
+
+        leftlist = [('Performance (real vs exp)',str(monthly_performance)+'%'),('Total production',str(int(round(totalGenerated)))+' kWh'),
+                     ('Expected production',str(int(round(ExpectedValue)))+ ' kWh'),('Total daily average',str(int(round(totalGenerated/project.invertersTotKWP[inverterID2]/len(kWhPerDay.index.values))))+' kWh/kWP')]
+
+        rightlist=[('Inverter type',str(project.inverterTypes[inverterID2])),('Nominal installed capacity',str(project.invertersTotKWP[inverterID2])+' kWP'),('Installed capacity',str(project.invertersTotkw[inverterID2])+' kW'),
+                   ('Expected daily average',str(project.invertersAvg[inverterID2])+' kWh/kWP')]
 
         inverterLayout.append(createInfoInverterPart(project,'inverter '+str(inverterID2+1),'Performance indicators:',leftlist,'Inverter information:',rightlist))
         inverterID2+=1
@@ -571,10 +579,11 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         internetProbString = [createReadableDate(str(internetProb.date())) for internetProb in project.internetProblems]
         gridProbString = [createReadableDate(str(gridProb.date())) for gridProb in project.gridProblemData]
         maintenaceString = [createReadableDate(str(maintenace.date())) for maintenace in project.maintenanceData]
+        extraCommentString = [str(comment) for comment in project.commentList]
 
 
         rightlist = [('Cleaning dates',str(cleaningDatesString)),('Internet Problems dates',str(internetProbString)),
-                     ('Grid Problems dates',str(gridProbString)),('Maintenance dates',str(maintenaceString))]
+                     ('Grid Problems dates',str(gridProbString)),('Maintenance dates',str(maintenaceString)),('Comment',str(extraCommentString))]
         titleDiv = createInfoTitle('Global overview kW')
         inf = createInfoPart(project,'Weather information:',leftlist,'Maintenance information:',rightlist)
 
@@ -698,10 +707,23 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 
+        month = datetime.datetime.strptime(projectDateBeginString,'%Y-%m-%d %H:%M:%S').month
+        GHIdaily= round(project.getGHI(month),2)
+        GIIdaily= round(project.getGII(month),2)
+        percentage = round(project.getPercentageChange(month),2)
+        monthlyExpectedProductionHorizontal = round(project.getMonthlyAverageKWhKWp(month),2)
+        InplaneProduction=percentage*monthlyExpectedProductionHorizontal
 
-        leftlist = [('Monthly performance',str(monthly_performance)+'%'),('Total generation',str(int(round(totalGenerated)))+' kWh'),
+
+        PR = round((totalGenerated/project.totalkWP)/InplaneProduction,3)*100
+        print('PR:'+str(PR))
+
+
+
+
+        leftlist = [('Performance ratio',str(PR)+'%'),('GHI daily',str(GHIdaily)+' kWh/m^2'),('GII daily',str(GIIdaily)+' kWh/m^2'),('Total production',str(int(round(totalGenerated)))+' kWh'),
                      ('Real daily average',str((round(totalGenerated/project.totalkWP/len(df.index.values))))+' kWh/kWP')]
-        rightlist = [('Expected daily average',str((project.totAvg))+' kWh/kWP'),('Expected generation',str(int(round(ExpectedValue)))+ ' kWh'),
+        rightlist = [('Performance (real vs exp.)',str(monthly_performance)+'%'),('Expected production',str(int(round(ExpectedValue)))+ ' kWh'),('Expected daily average',str((project.totAvg))+' kWh/kWP'),
                      ('Number of underperforming days',underperfDays),('Number of overperforming days',overperfDays)]
         titDiv = createInfoTitle('Global overview kWh & kWh/kWP')
         info2div = createInfoPart(project,'Real performance indicators:',leftlist,'Estimated performance indicators:',rightlist)
@@ -713,7 +735,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
         inverterGraphs =[]
-        inverterGraphs.append(createInverterPlots(kWhPerDay,project))
+        inverterGraphs.append(createInverterPlots(kWhPerDay,project,projectDateBeginString))
 
         inverterGraphs= [item for sublist in inverterGraphs for item in sublist]
         inverterGraphs = column(inverterGraphs)
@@ -797,10 +819,10 @@ def collectData():
     ExtraData = extraComments.value
     reportNumber = str(reportNumberTxt.value)
     #TODO
-    GHI,GII,percentage = CE.collectSolarisData(solargisDatapath)
+    GHIdf = CE.collectSolarisData(solargisLocation.value)
 
 
-    project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData)
+    project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf)
     inputData=(project.name,project.getInverterDatefromTo(projectDateBeginString,projectDateEndString))
 
 
@@ -827,7 +849,7 @@ def createNewProjectScreen(quickReport=False):
     global projectNameTxt,reportNumberTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
     global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt
     global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra,filePick2
-    global cleaningDate,extraComments,structureDD,gridProbDate,maintenanceDate,internetProblemDate
+    global cleaningDate,extraComments,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation
     div0 = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
     global fileColumn1,fileColumn2
@@ -908,6 +930,7 @@ def createNewProjectScreen(quickReport=False):
 
 
     extraComments = TextInput(value="Here is a comment...", title="Comments:")
+    solargisLocation = TextInput(value='/Users/christiaan/Desktop/Solcor/dataMergeWeek/NDC_PV-8627-1705-1780_-31.783--70.984.xls', title="Solargis file location:")
 
 
 
@@ -924,7 +947,7 @@ def createNewProjectScreen(quickReport=False):
     newLayout = [[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],[],
                  [div],[total,totalkw,totAvg,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra],
                  [div3],[inverter2Type,filePick2,fileColumn2],[inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra],
-                 [div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments],[nextButton,buttonBack]]
+                 [div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation],[nextButton,buttonBack]]
 
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]

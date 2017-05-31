@@ -6,7 +6,7 @@ class Project(object):
 
 
 
-    def __init__(self, generalData,geoData,totalData,inverterData,maintanceData,ExtraData,adresData):
+    def __init__(self, generalData,geoData,totalData,inverterData,maintanceData,ExtraData,adresData,GHIdf):
         self.name = generalData[0]
         self.projectOrientation=generalData[1]
         self.projectInclination=generalData[2]
@@ -41,11 +41,15 @@ class Project(object):
 
 
         self.cleaningDates=maintanceData[0]
-        self.commentList = ExtraData
+        self.commentList = [ExtraData]
 
         self.gridProblemData=maintanceData[1]
         self.maintenanceData = maintanceData[2]
         self.internetProblems=maintanceData[3]
+
+        self.GHIdf=GHIdf
+
+
 
 
 
@@ -67,5 +71,38 @@ class Project(object):
 
     def getInverterDatefromTo(self,beginDate,endDate):
         return self.inverterData[beginDate:endDate]
+
+
+    def getGHI(self,monthString):
+        monthIndex = int(monthString)
+        print(monthIndex)
+        df = self.GHIdf
+        print(df[df.columns[0]])
+        return df[df.columns[0]][monthIndex-1]
+
+    def getGII(self,monthString):
+        monthIndex = int(monthString)
+        print(monthIndex)
+        df = self.GHIdf
+        return df[df.columns[1]][monthIndex-1]
+
+    def getPercentageChange(self,monthString):
+        monthIndex = int(monthString)
+        print(monthIndex)
+        df = self.GHIdf
+        return df[df.columns[2]][monthIndex-1]
+
+    def getDailyAverageKWhKWp(self,monthString):
+        monthIndex = int(monthString)
+        print(monthIndex)
+        df = self.GHIdf
+        return df[df.columns[3]][monthIndex-1]
+
+    def getMonthlyAverageKWhKWp(self,monthString):
+        monthIndex = int(monthString)
+        print(monthIndex)
+        df = self.GHIdf
+        return df[df.columns[4]][monthIndex-1]
+
 
 
