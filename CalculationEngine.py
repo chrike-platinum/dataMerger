@@ -4,6 +4,7 @@ from scipy.integrate import simps
 import solcorWeatherEngine as SWE
 import dataLoader as DL
 import pandas as pd
+import datetime
 
 
 def convertToHours(sampleRate):
@@ -109,7 +110,7 @@ def returnAverageCloudData(beginDate,endDat,lat,lng):
     return pd.concat(means)
 
 
-def collectSolarisData(path):
+def collectSolarisData(path,year):
     df_GHI,df_GII,df_PV = DL.collectSolargisData(path)
     #monthNr = pd.to_datetime(beginDate).month
     df_GHI_column= df_GHI[df_GHI.columns[2]].to_frame()
@@ -119,13 +120,42 @@ def collectSolarisData(path):
     dfPercent_column = (df_GII_column[df_GII_column.columns[0]]/df_GHI_column[df_GHI_column.columns[0]]).to_frame()
     df = pd.concat([df_GHI_column,df_GII_column,dfPercent_column,df_PV_column1,df_PV_column2],axis=1)
     df.columns = [df.columns.values[0]+'_GHI',df.columns.values[1]+'_GII','percentageChange',df.columns.values[3]+' daily',df.columns.values[3]+' monthly']
+    monthList = [1,2,3,4,5,6,7,8,9,10,11,12]
+    dateList=[]
+    #create dates
+    for i in monthList:
+        dateString = '1'+'-'+str(i)+'-'+str(year)
+        date = datetime.datetime.strptime(dateString,'%d-%m-%Y')
+        dateList.append(date)
+
+
+    df = df.set_index([dateList])
+    endDate = (dateList[-1] + pd.DateOffset(day=31)).to_datetime()
+    dates = pd.date_range(dateList[0], endDate, freq='D')
+    df = df.reindex(dates, method='ffill')
     return df
 
 
+'''
+def reindexforYear(df):
+    df['month'] = pd.to_datetime(df.index.values, format='%Y-%m')
+    df = df.pivot(index='month', columns='Ghd_GHI')
 
+    start_date = df.index.min() - pd.DateOffset(day=1)
+    end_date = df.index.max() + pd.DateOffset(day=31)
+    dates = pd.date_range(start_date, end_date, freq='D')
+    dates.name = 'date'
+    df = df.reindex(dates, method='ffill')
+
+    #df = df.stack(['Ghd_GHI','Gid_GII','percentageChange','Esd daily','Esd monthly']])
+    df.stack('Ghd_GHI')
+    df = df.sortlevel(level=1)
+    df = df.reset_index()
+    return df
+'''
 
 
 name = 'NDC_PV-8627-1705-1780_-31.783--70.984.xls'
 path='/Users/christiaan/Desktop/Solcor/dataMergeWeek/'
-collectSolarisData(path+name)
+print(collectSolarisData(path+name,2017))
 #

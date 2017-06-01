@@ -1,6 +1,9 @@
 __author__ = 'christiaan'
 import dataLoader as DL
 import pandas as pd
+import datetime
+from datetime import timedelta, date
+import CalculationEngine as CE
 
 class Project(object):
 
@@ -64,45 +67,66 @@ class Project(object):
         listOfDF=[]
         for path,col,inverterType in zip(self.inverterFilePaths,self.inverterColumnNumbers,self.inverterTypes):
                 print('fetch')
-                listOfDF.append(DL.fetchFilesforInverter(path,col-1,inverterType))
-
-        i+=1
+                listOfDF.append(DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i)))
+                i+=1
         self.inverterData = pd.concat(listOfDF,axis=1,ignore_index=False)
 
-    def getInverterDatefromTo(self,beginDate,endDate):
+    def getInverterDatafromTo(self,beginDate,endDate):
         return self.inverterData[beginDate:endDate]
 
 
-    def getGHI(self,monthString):
-        monthIndex = int(monthString)
-        print(monthIndex)
+    def getGHI(self,begindateString,enddateString):
+        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
         print(df[df.columns[0]])
-        return df[df.columns[0]][monthIndex-1]
+        return df[df.columns[0]][beginDate:endDate].mean()
 
-    def getGII(self,monthString):
-        monthIndex = int(monthString)
-        print(monthIndex)
+    def getGII(self,begindateString,enddateString):
+        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
-        return df[df.columns[1]][monthIndex-1]
+        return df[df.columns[1]][beginDate:endDate].mean()
 
-    def getPercentageChange(self,monthString):
-        monthIndex = int(monthString)
-        print(monthIndex)
+    def getPercentageChange(self,begindateString,enddateString):
+        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
-        return df[df.columns[2]][monthIndex-1]
+        return df[df.columns[2]][beginDate:endDate].mean()
 
-    def getDailyAverageKWhKWp(self,monthString):
-        monthIndex = int(monthString)
-        print(monthIndex)
+    def getDailyAverageKWhKWp(self,begindateString,enddateString):
+        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
-        return df[df.columns[3]][monthIndex-1]
+        return df[df.columns[3]][beginDate:endDate].mean()
 
-    def getMonthlyAverageKWhKWp(self,monthString):
-        monthIndex = int(monthString)
-        print(monthIndex)
+    def getMonthlyAverageKWhKWp(self,begindateString,enddateString):
+        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
-        return df[df.columns[4]][monthIndex-1]
+        return df[df.columns[4]][beginDate:endDate].mean()
 
 
+'''
+
+def getDatesBetween(date1, date2):
+    datelist=[]
+    for n in range(int ((date2 - date1).days)+1):
+        datelist.append(date1 + timedelta(n))
+    return datelist
+
+
+
+def getMonthDistributions(date1, date2):
+    dateList = getDatesBetween(date1, date2)
+    monthNumberList=[]
+    for date in dateList:
+        monthNumberList.append(date.month)
+    occurences = [(x,monthNumberList.count(x)) for x in set(monthNumberList)]
+    return occurences
+
+start_dt = '2017-04-01 00:00:00'
+end_dt = '2017-05-30 23:45:00'
+
+'''
 
