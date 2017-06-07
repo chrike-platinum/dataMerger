@@ -17,12 +17,6 @@ from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib import colors
 
 
-clientName = "Dummy name"
-clientAddress="Dummy street 9"
-clientLand="Chile"
-clientTel="+32 000 00 00 00"
-
-
 def addPageNumber(canvas, doc):
     """
     Add the page number
@@ -147,12 +141,35 @@ def makeTable(list,column1Width,column2Width):
     ('LINEABOVE', (0,1), (-1,-1), 0.25, colors.black),
     ('LINEBELOW', (0,-1), (-1,-1), 2, colors.Color(0.496,0.723,0.234))])
 
-    data= list
+    data=list
     table = Table(data, colWidths=[column1Width,column2Width],style=LIST_STYLE)
 
     #table.wrapOn(c, 100, 20)
     return table
 
+def __chopLine(line, maxline):
+
+    cant = len(line) / maxline
+    cant += 1
+    strline = ""
+    index = maxline
+    for i in range(1,cant):
+        index = maxline * i
+        strline += "%s\n" %(line[(index-maxline):index])
+    strline += "%s\n" %(line[index:])
+    return strline
+
+def drawCommentBox(c,doc,x,y,width,height,text,styleSmallHeading):
+    ptext='<font color=rgb(73,75,88) size=10>Comment:</font>'
+    createParagraph(c,doc, ptext, x-27, y+187, styleSmallHeading)
+
+    c.setStrokeColorRGB(0.496,0.723,0.234)
+    LIST_STYLE = TableStyle([('BOX', (0,0), (-1,0), 1, colors.Color(0.496,0.723,0.234)),('VALIGN',(-1,-1),(-1,-1),'TOP')])
+    text = __chopLine(text, 105)
+    data=[[text]]
+    table = Table(data, colWidths=[width],rowHeights=[height],style=LIST_STYLE)
+    table.wrapOn(c, x, y)
+    table.drawOn(c, x, y)
 
 
 def createInfoBlockTable(c,y,doc,leftTitle,leftList,rightTitle,rightList,styleNormal,styleHeading,leftTitleOffset,rightTitleOffset,leftTableWidth,rightTablewidth):
@@ -177,7 +194,9 @@ def createInfoBlockTable(c,y,doc,leftTitle,leftList,rightTitle,rightList,styleNo
     frameRList.addFromList([rightInformation],c)
 
 
-def testPDF(tempPlotDir,isTechReportRequest=True):
+
+
+def createPDF(tempPlotDir,isTechReportRequest=True):
     todayString = datetime.date.today().strftime("%B %d, %Y")
     doc = SimpleDocTemplate('test.pdf', pagesize = A4, title = 'Solcor injection rate Report ', author ='christiaan' )
     frameL = Frame(doc.leftMargin-30, doc.bottomMargin, doc.width/2-6, doc.height-5.3*cm, id='col1')
@@ -258,9 +277,11 @@ def testPDF(tempPlotDir,isTechReportRequest=True):
                doc.height, id='col2')
 
     leftList=[('Number of cloudy days',2),('Number of rainy days', 0)]
-    rightList =[('Cleaning dates:',0),['Internet problems dates:',0],['Grid Problems dates:',0],['Maintenance dates:',0],['Comment:','here is a coment']]
+    rightList =[('Cleaning dates:',0),['Internet problems dates:',0],['Grid Problems dates:',0],['Maintenance dates:',0]]
 
     createInfoBlockTable(c,130,doc,"Weather information:",leftList,"Maintenance information:",rightList,styleNormal,styleHeading,30,30,3.9*cm, 4.7*cm)
+
+    drawCommentBox(c,doc,10,140,20*cm,3*cm,"halllo",styleSmallHeading)
 
     #secondPage
     c.showPage()
@@ -352,7 +373,201 @@ def testPDF(tempPlotDir,isTechReportRequest=True):
 
 
 
+    c.save()
 
+def testPDF(tempPlotDir,isTechReportRequest=True):
+    todayString = datetime.date.today().strftime("%B %d, %Y")
+    doc = SimpleDocTemplate('test.pdf', pagesize = A4, title = 'Solcor injection rate Report ', author ='christiaan' )
+    frameL = Frame(doc.leftMargin-30, doc.bottomMargin, doc.width/2-6, doc.height-5.3*cm, id='col1')
+    frameR = Frame(doc.leftMargin-20+doc.width/2+6, doc.bottomMargin, doc.width/2-6,
+               doc.height-5.3*cm, id='col2')
+    #doc.addPageTemplates([PageTemplate(id='TwoCol',frames=[frame1,frame2])])
+    frame =  Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normalFrame')
+
+    print('Creating PDF...')
+
+    c  = Canvas('mydoc.pdf')
+
+    styles = getSampleStyleSheet()
+    styleNormal = styles['Normal']
+    styleNormal.fontSize=10
+    styleHeading = styles['Heading1']
+    styleSmallHeading = styles['Heading2']
+    styleHeading.alignment = 1 # centre text (TA_CENTRE)
+    styleSmallHeading.aligment =1
+
+
+    # Text is added using the Paragraph class
+    #firstPage
+    bannerFrame = Frame(0*cm, doc.height, 210*mm, 48*mm, id='normal')
+    bannerFrame.addFromList([Image('SolcorBanner.png',20*cm, 4*cm)],c)
+    print('banner added...')
+
+    ptext='<font color=rgb(73,75,88) size="20"><u> PV performance report</u></font>'
+    createParagraph(c,doc, ptext, 25, 0, styleHeading)
+
+    ptext='<font color=rgb(73,75,88) size="14"> name todo</font>'
+    createParagraph(c,doc, ptext, 25, 9, styleHeading)
+
+    ptext='<font color=rgb(73,75,88) size="12"> 01/04/2017 - 30/04/2017 </font>'
+    createParagraph(c,doc, ptext, 25, 15, styleHeading)
+
+    ptext='<font color=rgb(73,75,88)>General information</font>'
+    createParagraph(c,doc, ptext, 80, 24, styleSmallHeading)
+
+    c.setStrokeColorRGB(0.496,0.723,0.234)
+    c.line(10*mm,222*mm,200*mm,222*mm)
+
+
+
+    story1=[]
+    story1.append(Paragraph('Report: +reportNumber',styleNormal))
+    story1.append(Paragraph('Date: +todayString',styleNormal))
+    story1.append(Paragraph('project.contactPerson', styleNormal))
+    story1.append(Paragraph('project.name', styleNormal))
+    story1.append(Paragraph('project.street', styleNormal))
+    story1.append(Paragraph('project.city', styleNormal))
+    story1.append(Paragraph('project.telephoneNumber', styleNormal))
+    frameL.addFromList(story1,c)
+    print('client info added...')
+
+
+    story2=[]
+    story2.append(Paragraph('Installed capacity: + str(project.totalkWP)',styleNormal))
+    story2.append(Paragraph('Nominal Installed capacity: + str(project.totalkw)',styleNormal))
+    story2.append(Paragraph('Longitude/latitude: + str(project.structureType)',styleNormal))#longitude/latitude: '+str(project.projectLongitude)+'° / '+str(project.projectLatitude)+'°'
+    story2.append(Paragraph('Orientation/Inclination: + 90 12 23 / 123 34 34',styleNormal)) #'Orientation/Inclination: '+str(project.projectOrientation)+'° / '+str(project.projectInclination)+'°'
+    story2.append(Paragraph('Structure: + str(project.structureType)',styleNormal))
+    frameR.addFromList(story2,c)
+
+
+    ptext='<font color=rgb(73,75,88)>Global overview kW</font>'
+    createParagraph(c,doc, ptext, 80, 72, styleSmallHeading)
+
+    c.setStrokeColorRGB(0.496,0.723,0.234)
+    c.line(10*mm,174*mm,200*mm,174*mm)
+
+    #Add plot to pdf
+    firstPlot = Image(tempPlotDir+'plot3.png',19.8*cm, 9*cm)
+    firstPlot.drawOn(c, *coord(doc,5, 170, mm))
+
+    frameL2 = Frame(doc.leftMargin, doc.bottomMargin, doc.width/2-6, doc.height-15*cm, id='col1')
+    frameR2 = Frame(doc.leftMargin+doc.width/2+6, doc.bottomMargin, doc.width/2-6,
+               doc.height, id='col2')
+
+    leftList=[('Number of cloudy days',2),('Number of rainy days', 0)]
+    rightList =[('Cleaning dates:',0),['Internet problems dates:',0],['Grid Problems dates:',0],['Maintenance dates:',0]]
+
+    createInfoBlockTable(c,130,doc,"Weather information:",leftList,"Maintenance information:",rightList,styleNormal,styleHeading,30,30,3.9*cm, 4.7*cm)
+
+    drawCommentBox(c,doc,1.5*cm,30,18*cm,2*cm,"Here is a long comment about some stuff and stuff.aakjhsjkhakjhdkjhaskjhdkhkjsahkjdhkjashjkdhkjashkjdhkjahsdkjhaskjhkjdhkjashkjdhasjkhkdjhkas  hdjhaskjhaksjhkjdhkjasjh jhdkjashkjhaskjhskjahkjd askjhkjsahjkdhskjhjkdsjkhsajhaskhljksd ",styleSmallHeading)
+
+
+    #secondPage
+    page_num = c.getPageNumber()
+    c.drawString(15, 15, 'Solcor.org')
+    c.drawString(570, 15, str(page_num))
+
+    c.showPage()
+
+    bannerFrame = Frame(0*cm, doc.height, 210*mm, 48*mm, id='normal')
+    bannerFrame.addFromList([Image('SolcorBanner.png',20*cm, 4*cm)],c)
+
+    ptext='<font color=rgb(73,75,88)>Global overview kWh & kWh/kWP</font>'
+    createParagraph(c,doc, ptext, 65, 6, styleSmallHeading)
+
+    c.setStrokeColorRGB(0.496,0.723,0.234)
+    c.line(10*mm,240*mm,200*mm,240*mm)
+
+    secondPlot = Image(tempPlotDir+'plot2.png',20*cm, 9*cm)
+    secondPlot.drawOn(c, *coord(doc,5, 100, mm))
+
+    leftList=[('Performance ratio:', '72.7'+'%'),('GHI daily:', '4.92'+' kWh/m^2'),('GII daily:', '5.72'+' kWh/m^2'),('Total production:', '5518'+' kWh'),('Real daily average:', '4.0'+' kWh/kWP')]
+    rightList=[('Expected production:', '7588'+' kWh'),('Expected daily average:', '5.5'+' kWh/kWP'),('Expected daily average:', '252.93'+' kWh'),('Number of underperforming days:', '30'),('Number of overperforming days:', '0')]
+    createInfoBlockTable(c,190,doc,'Real performance indicators:',leftList,'Estimated performance indicators:',rightList,styleNormal,styleHeading,10,10,6*cm,2.5*cm)
+
+
+    page_num = c.getPageNumber()
+    c.drawString(15, 15, 'Solcor.org')
+    c.drawString(570, 15, str(page_num))
+    c.showPage()
+
+    if (isTechReportRequest):
+    #thirdPage
+
+        #do this for the first elements in list
+
+        bannerFrame = Frame(0*cm, doc.height, 210*mm, 48*mm, id='normal')
+        bannerFrame.addFromList([Image('SolcorBanner.png',20*cm, 4*cm)],c)
+
+        ptext='<font color=rgb(73,75,88)>Inverter: overview kWh/kWP</font>'
+        createParagraph(c,doc, ptext, 73, 6, styleSmallHeading)
+
+        c.setStrokeColorRGB(0.496,0.723,0.234)
+        c.line(10*mm,240*mm,200*mm,240*mm)
+
+        secondPlot = Image(tempPlotDir+'plot1.png',20*cm, 9*cm)
+        secondPlot.drawOn(c, *coord(doc,3, 100, mm))
+
+
+        i=0
+        for a in [0,0]:
+            ptext='<font color=rgb(73,75,88) size="16"><u>Inverter 1%</U></font>'
+            createParagraph(c,doc, ptext, 90, 110+i, styleSmallHeading)
+
+            leftTitle='Inverter information:'
+            leftList = [('Performance ratio:','70.0'+'%'),('Total production:', '2945'+' kWh'),('Expected production:', '4206'+' kWh'),('Real daily average:', '3.85'+' kWh/kWP')]
+            rightList = [('Inverter type:', '25000TL-30'),('Installed capacity:', '25.5'+' kWP'),('Nominal installed capacity:', '25.0'+' kW'),('Expected daily average:', '5.5'+' kWh/kWP'),('Expected daily average:', '140.21'+' kWh')]
+            rightTitle='Performance indicators:'
+
+
+            createInfoBlockTable(c,135+i,doc,leftTitle,leftList,rightTitle,rightList,styleNormal,styleHeading,30,30,6*cm,3*cm)
+            i+=57
+        #if len(list)>2:
+        page_num = c.getPageNumber()
+        c.drawString(15, 15, 'Solcor.org')
+        c.drawString(570, 15, str(page_num))
+        c.showPage()
+            #proceed on next page
+        i=0
+        counter = 1
+        for a in [1,2,3,4,5,6]:
+
+                if (counter!=0 and counter%4==0):
+                    page_num = c.getPageNumber()
+                    c.drawString(15, 15, 'Solcor.org')
+                    c.drawString(570, 15, str(page_num))
+                    c.showPage()
+                    i=0
+
+                bannerFrame = Frame(0*cm, doc.height, 210*mm, 48*mm, id='normal')
+                bannerFrame.addFromList([Image('SolcorBanner.png',20*cm, 4*cm)],c)
+
+                ptext='<font color=rgb(73,75,88)>Inverter: overview kWh/kWP</font>'
+                createParagraph(c,doc, ptext, 73, 6, styleSmallHeading)
+
+                c.setStrokeColorRGB(0.496,0.723,0.234)
+                c.line(10*mm,240*mm,200*mm,240*mm)
+
+                ptext='<font color=rgb(73,75,88) size="16"><u>Inverter 1%'+str(i)+'</U></font>'
+                createParagraph(c,doc, ptext, 90, 20-i, styleSmallHeading)
+
+
+                leftTitle='Inverter information:'
+                leftList = [('Performance ratio:','70.0'+'%'),('Total production:', '2945'+' kWh'),('Expected production:', '4206'+' kWh'),('Real daily average:', '3.85'+' kWh/kWP')]
+                rightList = [('Inverter type:', '25000TL-30'),('Installed capacity:', '25.5'+' kWP'),('Nominal installed capacity:', '25.0'+' kW'),('Expected daily average:', '5.5'+' kWh/kWP'),('Expected daily average:', '140.21'+' kWh')]
+                rightTitle='Performance indicators:'
+
+                createInfoBlockTable(c,280+i,doc,leftTitle,leftList,rightTitle,rightList,styleNormal,styleHeading,30,30,6*cm,3*cm)
+
+
+
+                i-=57
+                counter+=1
+
+    page_num = c.getPageNumber()
+    c.drawString(15, 15, 'Solcor.org')
+    c.drawString(570, 15, str(page_num))
 
     c.save()
 

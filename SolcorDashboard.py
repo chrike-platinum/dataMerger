@@ -916,7 +916,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         InplaneProduction=percentage*monthlyExpectedProductionHorizontal
 
 
-        print()
+        
         PR = round((totalGenerated/project.totalkWP)/InplaneProduction,3)*100
         print('PR:'+str(PR))
 
