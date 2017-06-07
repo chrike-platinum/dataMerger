@@ -116,9 +116,12 @@ def collectSolarisData(path,year):
     df_GII_column =df_GII[df_GII.columns[2]].to_frame()
     df_PV_column1 =df_PV[df_PV.columns[2]].to_frame()
     df_PV_column2 =df_PV[df_PV.columns[1]].to_frame()
+
+    print(df_PV)
+    df_PV_PR_column=df_PV[df_PV.columns[5]].to_frame()
     dfPercent_column = (df_GII_column[df_GII_column.columns[0]]/df_GHI_column[df_GHI_column.columns[0]]).to_frame()
-    df = pd.concat([df_GHI_column,df_GII_column,dfPercent_column,df_PV_column1,df_PV_column2],axis=1)
-    df.columns = [df.columns.values[0]+'_GHI',df.columns.values[1]+'_GII','percentageChange',df.columns.values[3]+' daily',df.columns.values[3]+' monthly']
+    df = pd.concat([df_GHI_column,df_GII_column,dfPercent_column,df_PV_column1,df_PV_column2,df_PV_PR_column],axis=1)
+    df.columns = [df.columns.values[0]+'_GHI',df.columns.values[1]+'_GII','percentageChange',df.columns.values[3]+' daily',df.columns.values[3]+' monthly','PR']
     monthList = [1,2,3,4,5,6,7,8,9,10,11,12]
     dateList=[]
     #create dates

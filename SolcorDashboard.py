@@ -43,7 +43,7 @@ import re
 import matplotlib.dates as mdates
 from bokeh.models import Legend
 import pdfMaker as PM
-
+import urlparse, urllib
 
 #curdoc=curdoc()
 projects=[]
@@ -66,216 +66,9 @@ xdr = Range1d(start=0, end=1)
 ydr = Range1d(start=0, end=1)
 
 
-#plot = Plot(title="ImageURL", x_range=xdr, y_range=ydr)
-#banner = ImageURL(url='SolcorBanner2.png', x=0, y=1, w=1, h=1, anchor="center", global_alpha=0.2)
-#plot.add_glyph(source, banner)
 
 
 
-
-
-
-
-def createPlots(datalists,cloudsPerDay,magnification,kWhPerDay,totalkWh,rainPerDay):
-####TOTAL
-    page=[]
-    for project in datalists:
-        #p1 = Line(i[1],title=i[0],ylabel= 'kW',xlabel='Time',plot_width=600, plot_height=300)
-
-        p = figure(width=1200, height=500,title=project[0],x_axis_type='datetime',toolbar_sticky=False)
-        p.title.text_font_size='15pt'
-        p.y_range=Range1d(0, 20)
-        p.extra_y_ranges = {"foo": Range1d(start=0, end=200)}
-        p.add_layout(LinearAxis(y_range_name="foo"), 'right')
-
-#####ADDkWHDATA
-        TotalkWhText = Div(text="""<p style="font-size:20px"> Total: """+str(int(round(totalkWh)))+""" kWh.""",
-        width=300, height=30)
-
-        TotalkWhText2 = Div(text="""<p style="font-size:20px"> Avg/day: """+str(int(round(totalkWh/len(kWhPerDay.index.values))))+""" kWh.""",
-        width=300, height=30)
-
-        totalKWhPerday = kWhPerDay.sum(axis=1)
-        totalKWhPerday.index = totalKWhPerday.index + pd.DateOffset(hours=12)
-        kWh =p.line(x=totalKWhPerday.index.values,y=totalKWhPerday,color='red',y_range_name="foo")
-
-
-#####ADDCloudDATA
-        amountOfCloudDays = len([x for x in cloudsPerDay if x >= cloudyDaythresholdPercentage])
-
-        amountOfCloudyDaysTxt = Div(text="""<p style="font-size:20px"> Cloudy days: """+str(amountOfCloudDays),
-        width=300, height=30)
-
-        cloudsPerDay.index = cloudsPerDay.index + pd.DateOffset(hours=12)
-
-        l0 = p.circle(x=cloudsPerDay.index.values, y=cloudsPerDay*magnification, line_width=10,color='grey')
-        meansLabel = [str(int(round(100*(x),0)))+'%' for x in cloudsPerDay.values.tolist()]
-
-        source = ColumnDataSource(data=dict(x=cloudsPerDay.index,
-                                    y=cloudsPerDay*0,
-                                    names=meansLabel))
-
-
-        labels = LabelSet(x='x', y='y', text='names', level='glyph',x_offset=-5, y_offset=5,source=source, render_mode='canvas',text_font_size="10pt")
-#######RAINDATA
-
-        amountOfRainDays = len([x for x in rainPerDay if x >= rainyDaythresholdPercentage])
-
-        amountOfRainyDaysTxt = Div(text="""<p style="font-size:20px"> Rainy days: """+str(amountOfRainDays),
-        width=300, height=30)
-
-
-
-
-########ADDKW Data
-        ##plot
-        a=0
-        lst = ['green', 'blue','orange','grey']
-        colorPool = cycle(lst)
-        for b in project[1].columns:
-            x= project[1].index.to_datetime()
-            print(x[0].day)
-            project[1]['dates'] = project[1].index.to_datetime()
-            p.line(x=x,y=project[1][project[1].columns[a]],legend=project[1].columns[a],color=next(colorPool))
-            a+=1
-        p.xaxis.formatter=DatetimeTickFormatter(
-        hours=["%d %B %Y"],
-        days=["%d %B %Y"],
-        months=["%d %B %Y"],
-        years=["%d %B %Y"],
-            )
-
-
-
-        #p.xaxis.major_label_orientation = pi/4
-        p.add_layout(labels)
-        p.legend.location = "top_right"
-
-
-
-
-
-        checkbox = CheckboxGroup(labels=["Clouds", "kWh"],
-                                 active=[0,1], width=100)
-        checkbox.callback = CustomJS(args=dict(line0=l0,line2=labels, line1=kWh), code="""
-            //console.log(cb_obj.active);
-            line0.visible = false;
-            line1.visible = false;
-            line2.visible=false;
-            for (i in cb_obj.active) {
-                //console.log(cb_obj.active[i]);
-                if (cb_obj.active[i] == 0) {
-                    line0.visible = true;
-                    line2.visible = true;
-                } else if (cb_obj.active[i] == 1) {
-                    line1.visible = true;
-                }
-            }
-            """)
-
-
-
-
-
-
-
-        sidePanel = widgetbox([TotalkWhText,TotalkWhText2,amountOfCloudyDaysTxt,amountOfRainyDaysTxt],height=1000)
-
-        #sidePanel = [checkbox_group,sidePanel]
-
-
-
-        list=[]
-        list.append([p,checkbox,sidePanel])
-
-        div = Div(text="""<hr noshade size=4 color=green>""",
-        width=1000, height=30)
-
-        dividerWidget = widgetbox(div)
-
-        list.append([dividerWidget])
-
-        tab = Panel(child=layout(list),title='Total')
-        tabs = Tabs(tabs=[tab])
-        page.append(tabs)
-    print('page',page)
-    return page
-
-
-
-'''
-newPath = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Nueces del Choapa'
-newPath2 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/gabriel Varela'
-newPath3 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos'
-newPath4 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos2/Puratos'
-newPath5 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces'
-newPath6 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/El Arenal/El Arenal'
-
-dataList = DL.fetchFilesforProject(newPath)
-dataList2 = DL.fetchFilesforProject(newPath2)
-dataList3 = DL.fetchFilesforProject(newPath3)
-dataList4 = DL.fetchFilesforProject(newPath4)
-#dataList5 = DL.fetchFilesforProject(newPath5)
-#dataList6 = DL.fetchFilesforProject(newPath6)
-#print('DL',dataList6)
-
-
-
-
-
-d1 = "2017-05-01 00:00:00"
-d2 = "2017-05-07 23:00:00"
-
-lat = -33.447487
-lng = -70.673676
-magnification=50
-
-
-kWhPerDay = CE.getkWhPerDay(dataList)
-totalkWh = CE.getTotalkWh(dataList)
-means = CE.returnAverageCloudData(d1,d2,-33.5041,-70.7109)
-rain = CE.returnAverageRainData(d1,d2,-33.5041,-70.7109)
-
-
-TotalData=[dataList,dataList2,dataList3,dataList4]
-'''
-
-
-
-def showProjectMenu(TotalData,means,magnification,kWhPerDay,totalkWh,rain):
-    #curdoc().clear()
-    list= createPlots(TotalData,means,magnification,kWhPerDay,totalkWh,rain)
-
-
-
-    #####MAKE OVERALL LAYOUT OF ALL THE PROJECTS
-    #l = layout(list, sizing_mode='fixed')
-    listOfProjects=[]
-    i=0
-    tabu=None
-    for panel in list:
-        tab = Panel(child=panel,title=TotalData[i][0])
-        listOfProjects.append(tab)
-        i+=1
-        tabu=panel
-
-    #projects = Tabs(tabs=listOfProjects)
-    #curdoc._state._reset_with_doc(projects)
-    #curdoc.delete_modules()
-
-
-    buttonAddNewProject = Button(label="Add new project")
-    buttonAddNewProject.on_click(createNewProjectScreen())
-
-    currentLayout.children = [list[0]]
-    #curdoc().add_root(projects)
-
-
-
-
-#####################
-
-import urlparse, urllib
 
 def path2url(path):
     return urlparse.urljoin(
@@ -430,6 +223,8 @@ def createInfoInverterPart(project,title,listTitleLeft,listLeft,listTitleRight,l
 
 
 def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndString):
+
+
     fig = plt.figure(figsize=(12,5))
     ax = fig.add_subplot(111)
     #TOOLS = 'pan,box_zoom,wheel_zoom,save,box_select,crosshair,resize,undo,redo,reset'
@@ -451,7 +246,6 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     colorPool = cycle(lst)
     inverterID=0
     month = datetime.datetime.strptime(projectDateBeginString,'%Y-%m-%d %H:%M:%S').month
-    avgkwhKWP = project.getDailyAverageKWhKWp(projectDateBeginString,projectDateEndString)
     plotDates=[]
     plotlines = []
     for inverterName in kWhPerDay.columns.values:
@@ -466,7 +260,13 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
         #p3.line(x=kWhPerDay2.index.values,y=avg,legend='Inv '+str(inverterID+1)+' (avg)',color='light'+color)
         #plt.plot(kWhPerDay2.index.values,avg,label='Inv '+str(inverterID)+' (avg)',color='light'+color)
         inverterID +=1
-    avg = [avgkwhKWP]*len(kWhPerDay.index.values)
+
+    GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
+
+    expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
+    expDailyAvg=round(expPR*GIIdaily/100,2)
+
+    avg = [expDailyAvg]*len(kWhPerDay.index.values)
     avgLine = p3.line(x=kWhPerDay2.index.values,y=avg,color='black')
     plotlines.append(('Exp. avg.',[avgLine]))
 
@@ -512,23 +312,26 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     inverterLayout = []
     for inverterName in kWhPerDay.columns.values:
         totalGenerated = kWhPerDay[kWhPerDay.columns[inverterID2]].sum()
-        avgkwhKWP = avgkwhKWP
+
+        realDailyAvg=round(totalGenerated/project.invertersTotKWP[inverterID2]/len(kWhPerDay.index.values),2)
+        GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
+
+        expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
+        expDailyAvg=round(expPR*GIIdaily/100,2)
 
 
 
+        PR=round(realDailyAvg/GIIdaily*100,1)
 
-        percentage = round(project.getPercentageChange(projectDateBeginString,projectDateEndString),2)
-        ExpectedProductionHorizontal = round(project.getDailyAverageKWhKWp(projectDateBeginString,projectDateEndString),2)*len(kWhPerDay.index.values)
-        InplaneProduction=percentage*ExpectedProductionHorizontal
-        InplaneProductionkWh = InplaneProduction*project.invertersTotKWP[inverterID2]
+        #PR = round((totalGenerated/project.invertersTotKWP[inverterID2])/InplaneProduction,3)*100
 
-        PR = round((totalGenerated/project.invertersTotKWP[inverterID2])/InplaneProduction,3)*100
 
-        leftlist = [('Performance ratio',str(PR)+'%'),('Total production',str(int(round(totalGenerated)))+' kWh'),
-                     ('Expected production',str(int(round(InplaneProductionkWh)))+ ' kWh'),('Real daily average',str((round(totalGenerated/project.invertersTotKWP[inverterID2]/len(kWhPerDay.index.values),2)))+' kWh/kWP')]
+
+        leftlist = [('Real performance ratio',str(PR)+'%'),('Real total production',str(int(round(totalGenerated)))+' kWh'),
+                     ('Real daily average',str(realDailyAvg)+' kWh/kWP'),('Real daily average',str(realDailyAvg*project.invertersTotKWP[inverterID2])+' kWh')]
 
         rightlist=[('Inverter type',str(project.inverterTypes[inverterID2])),('Installed capacity',str(project.invertersTotKWP[inverterID2])+' kWP'),('Nominal installed capacity',str(project.invertersTotkw[inverterID2])+' kW'),
-                   ('Expected daily average',str(round((avgkwhKWP*percentage),2))+' kWh/kWP'),('Expected daily average',str(round((avgkwhKWP*percentage*project.invertersTotKWP[inverterID2]),2))+' kWh')]
+                   ('Expected daily average',str(expDailyAvg)+' kWh/kWP'),('Expected daily average',str(round((expDailyAvg*project.invertersTotKWP[inverterID2]),2))+' kWh')]
 
         inverterLayout.append(createInfoInverterPart(project,'inverter '+str(inverterID2+1),'Performance indicators:',leftlist,'Inverter information:',rightlist))
         inverterID2+=1
@@ -834,13 +637,11 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 
-        percentage = round(project.getPercentageChange(projectDateBeginString,projectDateEndString),2)
-        projectAVG=project.getDailyAverageKWhKWp(projectDateBeginString,projectDateEndString)*percentage
-
-
         ###ADD Averages
 
-
+        expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
+        GIIdaily=project.getGII(projectDateBeginString,projectDateEndString)
+        projectAVG = round(expPR*GIIdaily/100,2)
         yvaluesAVG = [projectAVG*project.totalkWP]*len(yValues)
         ExpAvhKwhLine = p2.line(x=df.index.values,y=yvaluesAVG,color='lightblue',line_width=2)
         kwhKWPLIne = p2.line(x=df.index.values,y=yValues/project.totalkWP,color='green',y_range_name="etxraAxis")
@@ -908,25 +709,28 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 
-        GHIdaily= round(project.getGHI(projectDateBeginString,projectDateEndString),2)
-        GIIdaily= round(project.getGII(projectDateBeginString,projectDateEndString),2)
+        GHIdaily= project.getGHI(projectDateBeginString,projectDateEndString)
+        GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
         percentage = round(project.getPercentageChange(projectDateBeginString,projectDateEndString),2)
-        dailyAvgKWhKWP= round(project.getDailyAverageKWhKWp(projectDateBeginString,projectDateEndString),2)
-        monthlyExpectedProductionHorizontal = dailyAvgKWhKWP*len(df.index.values)
-        InplaneProduction=percentage*monthlyExpectedProductionHorizontal
+
+        expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
+        expDailyAvg=round(expPR*GIIdaily/100,2)
 
 
-        
-        PR = round((totalGenerated/project.totalkWP)/InplaneProduction,3)*100
+
+
+        realDailyAvg=round((totalGenerated/project.totalkWP/len(df.index.values)),2)
+        PR=round(realDailyAvg/GIIdaily*100,1)
+        #PR = round((totalGenerated/project.totalkWP)/InplaneProduction,3)*100
         print('PR:'+str(PR))
 
 
 
 
-        leftlist = [('Performance ratio',str(PR)+'%'),('GHI daily',str(GHIdaily)+' kWh/m^2'),('GII daily',str(GIIdaily)+' kWh/m^2'),('Total production',str(int(round(totalGenerated)))+' kWh'),
-                     ('Real daily average',str((round(totalGenerated/project.totalkWP/len(df.index.values),2)))+' kWh/kWP')]
-        rightlist = [('Expected production',str(int(round(InplaneProduction*project.totalkWP)))+ ' kWh'),('Expected daily average',str(round((dailyAvgKWhKWP*percentage),2))+' kWh/kWP'),
-                     ('Expected daily average',str(round((dailyAvgKWhKWP*percentage*project.totalkWP),2))+' kWh'),('Number of underperforming days',underperfDays),('Number of overperforming days',overperfDays)]
+        leftlist = [('Real performance ratio',str(PR)+'%'),('GHI daily',str(GHIdaily)+' kWh/m^2'),('GII daily',str(GIIdaily)+' kWh/m^2'),('Real total production',str(int(round(totalGenerated)))+' kWh'),
+                     ('Real daily average',str(realDailyAvg)+' kWh/kWP'),('Real daily average',str(realDailyAvg*project.totalkWP)+' kWh')]
+        rightlist = [('Expected performance ratio',str(expPR)+ '%'),('Expected daily average',str(expDailyAvg)+' kWh/kWP'),
+                     ('Expected daily average',str(round((expDailyAvg*project.totalkWP),2))+' kWh'),('Expected monthly production',str(round((expDailyAvg*project.totalkWP*len(totalKWhPerday)),2))+' kWh'),('Number of underperforming days',underperfDays),('Number of overperforming days',overperfDays)]
         titDiv = createInfoTitle('Global overview kWh & kWh/kWP')
         info2div = createInfoPart(project,'Real performance indicators:',leftlist,'Estimated performance indicators:',rightlist)
 

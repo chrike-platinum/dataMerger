@@ -92,18 +92,27 @@ class Project(object):
         endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
         return df[df.columns[2]][beginDate:endDate].mean()
-
+    '''
     def getDailyAverageKWhKWp(self,begindateString,enddateString):
         beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
         endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
         return df[df.columns[3]][beginDate:endDate].mean()
-
+    '''
+    '''
     def getMonthlyAverageKWhKWp(self,begindateString,enddateString):
         beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
         endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
         return df[df.columns[4]][beginDate:endDate].mean()
+    '''
+    def getExpectedPR(self,begindateString,enddateString):
+        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
+        df = self.GHIdf
+        return df[df.columns[5]][beginDate:endDate].mean()
+
+
 
 
 '''

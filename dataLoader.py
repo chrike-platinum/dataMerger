@@ -195,7 +195,7 @@ def collectSolargisData(filePath):
     df_PV = pd.read_excel(filePath, sheetname="PV")
     skips3=getIndexOfFirstOccurance(df_PV,'Month')
     df_PV = pd.read_excel(filePath, sheetname="PV",skiprows=skips3+1)
-    df_PV = df_PV[df_PV.columns[0:endColumn]].head(n=endRow)
+    df_PV = df_PV[df_PV.columns[0:endColumn+1]].head(n=endRow)
     return df_GHI,df_GII,df_PV
 
 name = 'NDC_PV-8627-1705-1780_-31.783--70.984.xls'
