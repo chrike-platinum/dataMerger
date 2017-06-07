@@ -37,22 +37,25 @@ def searchStartingRowCSV(dataPath,fileName):
         dateIncluded = True
     return beginRow,dateIncluded,inverterName
 
-def importCSVFile(dataPath,fileName):
+def importCSVFile(dataPath,fileName,sampleRate2):
+    sampleRate = str(sampleRate2)
     start,dateIncluded,inverterName = searchStartingRowCSV(dataPath,fileName)
 
     df = pd.read_csv(dataPath+'/'+fileName, sep=';', encoding='latin1', parse_dates=True,index_col=0,skiprows=start)
     df=df.dropna(axis=1,how='all')
     ###Extend short dataframes
     dateDF = str(df.index.values[0])[:10]
+    print(str(fileName)+' busy...')
     if dateIncluded:
-        ix = pd.DatetimeIndex(start=dateDF+" 00:00:00", end=dateDF+" 23:45:00", freq='15Min')
-        df = df.resample('15Min').mean().ffill().reindex(ix).fillna(0)
+        ix = pd.DatetimeIndex(start=dateDF+" 00:00:00", end=dateDF+" 23:45:00", freq=sampleRate)
+        df = df.resample(sampleRate).mean().ffill().reindex(ix).fillna(0)
     else:
         try:
             date = re.search("([0-9]{4}\-[0-9]{2}\-[0-9]{2})", fileName).group(1)
             print('date found: '+date)
-            ix = pd.DatetimeIndex(start=date+" 00:00:00", end=date+" 23:45:00", freq='15Min')
-            df = df.resample('15Min').mean().ffill().set_index(ix).fillna(0)
+            ix = pd.DatetimeIndex(start=date+" 00:00:00", end=date+" 23:45:00", freq=sampleRate)
+            df = df.resample(sampleRate).mean().ffill().set_index(ix).fillna(0)
+
 
         except:
             print("No date found in file name!!! Used sampleDate of today ")
@@ -73,15 +76,16 @@ def importCSVFile(dataPath,fileName):
     return df
 
 def combineAllData(listOfDataFrames):
-    return pd.concat(listOfDataFrames)
+    df = pd.concat(listOfDataFrames)
+    return df
 
 
-def importAllFilesFromFolder(mypath):
+def importAllFilesFromFolder(mypath,sampleRate):
     listOfFileNames = [f for f in listdir(mypath) if isfile(join(mypath, f))]
     listOfFileNames = [x for x in listOfFileNames if not x.startswith('.')]
     list = []
     for file in listOfFileNames:
-        list.append(importCSVFile(mypath,file))
+        list.append(importCSVFile(mypath,file,sampleRate))
     return list
 
 def fetchFilesforProject(folderPath):
@@ -105,7 +109,7 @@ def fetchFilesforProject(folderPath):
 
     return result
 
-def fetchFilesforInverter(folderPath,colNr,inverterName):
+def fetchFilesforInverter(folderPath,colNr,inverterName,sampleRate):
     listofFolders = [x[0] for x in os.walk(folderPath)]
     if(len(listofFolders)>1):
         listofFolders = listofFolders[1:]
@@ -114,7 +118,7 @@ def fetchFilesforInverter(folderPath,colNr,inverterName):
     dataFramelist=[]
     for i in listofFolders:
         #foldername = os.path.basename(os.path.normpath(i))
-        combinedDf =combineAllData(importAllFilesFromFolder(i))
+        combinedDf =combineAllData(importAllFilesFromFolder(i,sampleRate))
         combinedDf.index = pd.to_datetime(combinedDf.index)
         newdf = combinedDf[combinedDf.columns[colNr]].to_frame()
         newdf.columns = [inverterName]
@@ -123,10 +127,10 @@ def fetchFilesforInverter(folderPath,colNr,inverterName):
 
 
 
+
     df = pd.concat(dataFramelist,axis=1,ignore_index=False)
     #df.index = pd.to_datetime(df.index)
     result = df
-
     return df
 
 

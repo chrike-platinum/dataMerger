@@ -2,6 +2,8 @@
 __author__ = 'christiaan'
 
 local_encoding = 'cp850'
+tempPlotDir = 'tempPlots/'
+plotFileName = 'plot'
 
 
 
@@ -35,12 +37,12 @@ from bokeh.models.widgets import Select
 import time
 import bokeh.io as BIO
 from bokeh.embed import components
-from bokeh.embed import file_html
 import matplotlib.pyplot as plt
 import numpy as np
 import re
 import matplotlib.dates as mdates
 from bokeh.models import Legend
+import pdfMaker as PM
 
 
 #curdoc=curdoc()
@@ -430,10 +432,10 @@ def createInfoInverterPart(project,title,listTitleLeft,listLeft,listTitleRight,l
 def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndString):
     fig = plt.figure(figsize=(12,5))
     ax = fig.add_subplot(111)
-    TOOLS = 'pan,box_zoom,wheel_zoom,save,box_select,crosshair,resize,undo,redo,reset'
-    p3 = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kWh/kWP',tools=TOOLS,toolbar_sticky=False)
-    p3.toolbar.active_drag = "auto"
-    p3.toolbar.active_scroll = "auto"
+    #TOOLS = 'pan,box_zoom,wheel_zoom,save,box_select,crosshair,resize,undo,redo,reset'
+    p3 = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kWh/kWP',toolbar_sticky=False)
+    #p3.toolbar.active_drag = "auto"
+    #p3.toolbar.active_scroll = "auto"
     ax.set_ylabel('kWh/kWP')
     ax.set_xlabel('Time')
     p3.title.text_font_size='15pt'
@@ -487,17 +489,18 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
 
 
+    ax.set_xticks(plotDates[0::1],minor=False)
+    ax.set_xticks(plotDates[1::2],minor=True)
 
-
-    ax.set_xticks(plotDates)
     ax.set_xticklabels(plotDates,rotation=45,ha='right',fontsize=8)
-    ax.grid(linewidth=0.5,which='major')
+    ax.xaxis.grid(linewidth=0.5,which='minor')
+    ax.yaxis.grid(linewidth=0.5,which='major')
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
           ncol=4, fancybox=True)
     myFmt = mdates.DateFormatter('%d %B %Y')
     ax.xaxis.set_major_formatter(myFmt)
 
-    fig.savefig('plot.png', bbox_inches='tight')
+    fig.savefig(tempPlotDir+'plot1.png', bbox_inches='tight')
 
 
     p3.xaxis[0].ticker=DatetimeTicker(desired_num_ticks=len(kWhPerDay))
@@ -536,11 +539,29 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
     return inverterGraph
 
+def handlemakePDF(divPDF,project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory):
+    divPDF.text ="""<p style="font-size:28px ;text-align: center">Creating PDF..."""
+    PM.makePDFReport(project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory)
+    divPDF.text ="""<p style="font-size:28px ;text-align: center">PDF created!"""
+
+def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir):
+    outputDirectory =''
+    buttonCreateExecReport = Button(label="Create executive report")
+    buttonCreateTechnicalReport = Button(label="Create technical report")
+    divPDF = Div(text="""<p style="font-size:28px ;text-align: center">Solcor""",
+    width=600, height=100)
+    buttonCreateExecReport.on_click(partial(handlemakePDF,divPDF,project,projectDateBeginString,projectDateEndString,False,reportNumber,tempPlotDir,outputDirectory))
+    buttonCreateTechnicalReport.on_click(partial(handlemakePDF,divPDF,project,projectDateBeginString,projectDateEndString,False,reportNumber,tempPlotDir,outputDirectory))
 
 
 
+    buttonBanner = row([buttonCreateExecReport,divPDF,buttonCreateTechnicalReport])
+
+    return buttonBanner
 
 def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString):
+
+        buttonBanner = createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir)
 
         banner = createInfoBanner(project,projectDateBeginString,projectDateEndString,reportNumber)
 
@@ -604,9 +625,13 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         meansLabel = [str(int(round(100*(x),0)))+'%' for x in cloudData.values.tolist()]
 
 
-        beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(1, 'D')
+        beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(2, 'D')
 
         cloudDataShiftIndex = np.insert(cloudDataShiftIndex,0,beginLabelCloud)
+        xcloud = cloudDataShiftIndex
+        offset = 0
+        ycloud= np.append(cloudData*0+1.1*dfMax+offset,[cloudData[0]*0+1.1*dfMax+offset])
+        namesCloud= ['cloud']+meansLabel
         source = ColumnDataSource(data=dict(x=cloudDataShiftIndex,
                                     y=np.append(cloudData*0+dfMax,[cloudData[0]*0+dfMax]),
                                     names=['cloud']+meansLabel))
@@ -615,6 +640,13 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
         cloudLabels = LabelSet(x='x', y='y', text='names', level='glyph',x_offset=-5, y_offset=17,source=source, render_mode='canvas',text_font_size="10pt",text_color='grey')
         p.add_layout(cloudLabels)
+        i=0
+        for (a,b,c) in zip(xcloud,ycloud,namesCloud):
+            if (i == 0):
+                ax1.text(a,b,c, color='grey', horizontalalignment='left',fontsize=9)
+            else:
+                ax1.text(a,b,c, color='grey', horizontalalignment='center',fontsize=9)
+            i+=1
 
 #######ADD RAIN DATA
 
@@ -624,15 +656,29 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         rainLabel = [str(int(round(100*(x),0)))+'%' for x in rain.values.tolist()]
 
 
-        beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(1, 'D')
+        beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(2, 'D')
         #rainDataShiftIndex = np.insert(rainDataShiftIndex,0,beginLabelRain)
         rainDataShiftIndex = np.r_[beginLabelRain, rainDataShiftIndex]
+        offset=0
+        x=rainDataShiftIndex
+        y=np.append(rain*0+1.2*dfMax+offset,[rain[0]*0+1.2*dfMax+offset])
+        names=['Rain']+rainLabel
         rainSource = ColumnDataSource(data=dict(x=rainDataShiftIndex,
                                     y=np.append(rain*0+dfMax,[rain[0]*0+dfMax]),
                                     names=['Rain']+rainLabel))
 
         rainLabels = LabelSet(x='x', y='y', text='names', level='glyph',x_offset=-5, y_offset=30,source=rainSource, render_mode='canvas',text_font_size="10pt",text_color='blue')
         p.add_layout(rainLabels)
+        i=0
+        for (a,b,c) in zip(x,y,names):
+            if (i == 0):
+                ax1.text(a,b,c, color='blue', horizontalalignment='left',fontsize=9)
+            else:
+                ax1.text(a,b,c, color='blue', horizontalalignment='center',fontsize=9)
+            i+=1
+
+
+
 ######fill info banner
         leftlist = [('Number of cloudy days',amountOfCloudDays),('Number of rainy days',amountOfRainDays)]
 
@@ -643,7 +689,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         extraCommentString = [str(comment) for comment in project.commentList]
 
 
-        rightlist = [('Cleaning dates',str(cleaningDatesString)),('Internet Problems dates',str(internetProbString)),
+        rightlist = [('Cleaning dates',str(cleaningDatesString)),('Internet problems dates',str(internetProbString)),
                      ('Grid Problems dates',str(gridProbString)),('Maintenance dates',str(maintenaceString)),('Comment',str(extraCommentString))]
         titleDiv = createInfoTitle('Global overview kW')
         inf = createInfoPart(project,'Weather information:',leftlist,'Maintenance information:',rightlist)
@@ -655,20 +701,29 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         cleaningLabels = p.circle(x=shiftedCleaningDates,y=[1.03*dfMax]*NrOfDates,line_color='orange',line_width=10)
         lineLegends.append(('cleaning',[cleaningLabels]))
 
+        ax1.scatter(shiftedCleaningDates,[1.03*dfMax]*NrOfDates,color='orange',label='cleaning',s=30)
+
 
         NrOfDatesG = len(project.gridProblemData)
         shiftedGridProbDates = [x+pd.DateOffset(hours=12) for x in project.gridProblemData]
         gribProdLabels = p.circle(x=shiftedGridProbDates,y=[1.03*dfMax]*NrOfDatesG,line_color='red',line_width=10)
+
+        ax1.scatter(shiftedGridProbDates,[1.03*dfMax]*NrOfDatesG,color='red',label='Problem',s=30)
 
 
         NrOfDatesM = len(project.maintenanceData)
         shiftedmaintanenanceDates = [x+pd.DateOffset(hours=12) for x in project.maintenanceData]
         maintenanceLabels = p.circle(x=shiftedmaintanenanceDates,y=[1.03*dfMax]*NrOfDatesM,line_color='red',line_width=10)
 
+        ax1.scatter(shiftedmaintanenanceDates,[1.03*dfMax]*NrOfDatesM,color='red',s=30)
+
         NrOfDatesI = len(project.internetProblems)
         shiftedinternetProbDates = [x+pd.DateOffset(hours=12) for x in project.internetProblems]
         internetProbLabels = p.circle(x=shiftedinternetProbDates,y=[1.03*dfMax]*NrOfDatesI,line_color='red',line_width=10)
         lineLegends.append(('Problem',[gribProdLabels,maintenanceLabels,internetProbLabels]))
+
+        ax1.scatter(shiftedinternetProbDates,[1.03*dfMax]*NrOfDatesI,color='red',s=30)
+
 
 
 ####ADD check box
@@ -701,6 +756,8 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         p.legend.click_policy="hide"
         p.legend.orientation = "horizontal"
 
+
+        ax1.set_ylim([-0.5, 1.3*dfMax])
         ax1.set_xticks(plotDates2[0::1],minor=False)
         ax1.set_xticks(plotDates2[1::2],minor=True)
         ax1.set_xticklabels(plotDates2,rotation=45,ha='right',fontsize=8)
@@ -711,7 +768,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         myFmt = mdates.DateFormatter('%d %B %Y')
         ax1.xaxis.set_major_formatter(myFmt)
 
-        fig3.savefig('plot3.png', bbox_inches='tight')
+        fig3.savefig(tempPlotDir+'plot3.png', bbox_inches='tight')
 
 
 
@@ -822,6 +879,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
         ax1.set_ylim([-0.5, 1.2*dfMaxkWh])
         ax2.set_ylim(0,2*dfMaxkWhkWP)
+        ax1.set_xticks(plotDates2[0::1],minor=False)
         ax1.set_xticks(plotDates2[1::2],minor=True)
         ax1.set_xticklabels(plotDates,rotation=45,ha='right',fontsize=8)
         ax1.xaxis.grid(linewidth=0.5,which='minor')
@@ -831,7 +889,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         myFmt = mdates.DateFormatter('%d %B %Y')
         ax1.xaxis.set_major_formatter(myFmt)
 
-        fig2.savefig('plot2.png', bbox_inches='tight')
+        fig2.savefig(tempPlotDir+'plot2.png', bbox_inches='tight')
 
         #BIO.output_file(filename='p2.html',mode='inline')
 
@@ -858,7 +916,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         InplaneProduction=percentage*monthlyExpectedProductionHorizontal
 
 
-
+        print()
         PR = round((totalGenerated/project.totalkWP)/InplaneProduction,3)*100
         print('PR:'+str(PR))
 
@@ -884,7 +942,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         inverterGraphs= [item for sublist in inverterGraphs for item in sublist]
         inverterGraphs = column(inverterGraphs)
 
-        globalLayout = column([globalkWGraph,GlobalKwhGraph,inverterGraphs])
+        globalLayout = column([buttonBanner,globalkWGraph,GlobalKwhGraph,inverterGraphs])
 
         globNewLayout.children = []
         globNewLayout.children =[globalLayout]
@@ -921,6 +979,8 @@ def conversion(old):
 
 
 def collectData():
+
+
     checklist = ["N", "n", "W","w","E","e","S","s","O",'o','Z','z']
     if (len([e for e in checklist if e in projectLatitude.value]) >=1):
         projectLatitudeCon = conversion(projectLatitude.value.decode('utf-8'))
@@ -934,9 +994,9 @@ def collectData():
     generalData = [str(x.value) for x in [projectNameTxt,projectOrientation,projectInclination,structureDD]]
     geoData = [projectLatitudeCon,projectLongitudeCon,str(projectLatitude.value),str(projectLongitude.value)]
     adresData = [str(x.value) for x in [projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt]]
-    totalData = [str(x.value) for x in [total,totalkw,totAvg,totExtra]]
-    inverter1Data =[str(x.value) for x in [inverter1Type,inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra,filePick1,fileColumn1] ]
-    inverter2Data = [str(x.value) for x in [inverter2Type,inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra,filePick2,fileColumn2]]
+    totalData = [str(x.value) for x in [total,totalkw,totExtra]]
+    inverter1Data =[str(x.value) for x in [inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1] ]
+    inverter2Data = [str(x.value) for x in [inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2,fileColumn2]]
     InverterData = [inverter1Data,inverter2Data]
     cleaningData = cleaningDate.value.split(',')
     cleaningData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in cleaningData if str(pd.to_datetime(x)) != 'NaT']
@@ -962,12 +1022,15 @@ def collectData():
     GHIdf = CE.collectSolarisData(solargisLocation.value,solargisYear.value)
 
 
-    project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf)
+    project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf,str(sampleRate.value))
     inputData=(project.name,project.getInverterDatafromTo(projectDateBeginString,projectDateEndString))
+    print('input',inputData)
 
 
-    kWhPerDay = CE.getkWhPerDay(inputData)
-    totalkWh = CE.getTotalkWh(inputData)
+    kWhPerDay = CE.getkWhPerDay(inputData,str(sampleRate.value))
+
+    totalkWh = CE.getTotalkWh(inputData,str(sampleRate.value))
+
 
 
 
@@ -989,8 +1052,8 @@ def collectData():
 def createNewProjectScreen(quickReport=False):
     global globNewLayout
     global projectNameTxt,reportNumberTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
-    global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt
-    global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra,filePick2
+    global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,sampleRate
+    global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2
     global cleaningDate,extraComments,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation,solargisYear
     div0 = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
@@ -1029,7 +1092,7 @@ def createNewProjectScreen(quickReport=False):
 
     total = TextInput(value="46", title="Total installed cap [kWP]:")
     totalkw = TextInput(value="45", title="Total installed cap [kW]:")
-    totAvg = TextInput(value="4.87", title="Total exp. daily avg. [kWh/kWP]:")
+    sampleRate = TextInput(value="15Min", title="Sample rate (e.g.'15Min','1H'):")
     totExtra = TextInput(value="", title="Total Extra:")
 
 
@@ -1042,7 +1105,7 @@ def createNewProjectScreen(quickReport=False):
 
     inverter1Tot = TextInput(value="25,5", title="Inverter 1 installed cap [kWP]:")
     inverter1Totkw = TextInput(value="25", title="Inverter 1 installed cap [kW]:")
-    inverter1Avg = TextInput(value="4.87", title="Inverter 1 exp. daily avg. [kWh/KWP]:")
+    #inverter1Avg = TextInput(value="4.87", title="Inverter 1 exp. daily avg. [kWh/KWP]:")
     inverter1Extra = TextInput(value="", title="Inverter 1 EXTRA:")
 
     filePick1 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter 1 data:")
@@ -1056,7 +1119,7 @@ def createNewProjectScreen(quickReport=False):
 
     inverter2Tot = TextInput(value="20,5", title="Inverter 2 installed cap [kWP]:")
     inverter2Totkw = TextInput(value="20", title="Inverter 2 installed cap [kW]:")
-    inverter2Avg = TextInput(value="4.87", title="Inverter 2 exp. daily avg. [kWh/kWP]:")
+    #inverter2Avg = TextInput(value="4.87", title="Inverter 2 exp. daily avg. [kWh/kWP]:")
     inveter2Extra = TextInput(value="", title="Inverter 2 EXTRA:")
 
     div4 = Div(text="""<hr noshade size=4 color=green>""",
@@ -1088,8 +1151,8 @@ def createNewProjectScreen(quickReport=False):
         nextButton = Button(label='Add project')
 
     newLayout = [[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],[],
-                 [div],[total,totalkw,totAvg,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Avg,inverter1Extra],
-                 [div3],[inverter2Type,filePick2,fileColumn2],[inverter2Tot,inverter2Totkw,inverter2Avg,inveter2Extra],
+                 [div],[total,totalkw,sampleRate,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Extra],
+                 [div3],[inverter2Type,filePick2,fileColumn2],[inverter2Tot,inverter2Totkw,inveter2Extra],
                  [div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation,solargisYear],[nextButton,buttonBack]]
 
     globNewLayout.children = []

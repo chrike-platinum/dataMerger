@@ -36,8 +36,8 @@ def returnAverageRainData(beginDate,endDat,lat,lng):
     df2 = df[df.columns[2]]
     df2 = df2.replace(-1,0)
     df2.index = pd.to_datetime(df2.index)
-    sunUp = '00:00'
-    sunDown = '23:45'
+    sunUp = '06:00'
+    sunDown = '21:00'
 
 
 
@@ -58,27 +58,26 @@ def returnAverageRainData(beginDate,endDat,lat,lng):
 
 
 
-def getkWhPerDay(dataList):
+def getkWhPerDay(dataList,sampleRate):
     dataList[1].index = pd.to_datetime(dataList[1].index)
     DFList = [group[1] for group in dataList[1].groupby(dataList[1].index.date)]
-
     resultList = []
     dates=[]
     for dat in DFList:
             dates.append(dat.index.values[0])
             dat.index = [pd.Timestamp(d) for d in dat.index]
-            freq = pd.infer_freq(dat.index)
+            #freq = pd.infer_freq(dat.index)
+            freq=sampleRate
             kWh = calculateTotalAreaVector(dat,freq)
             resultList.append(kWh)
-
 
     result = resultList#[list(i) for i in zip(*resultList)]
 
     df = pd.DataFrame(result,index=dates,columns=DFList[0].columns)
     return df
 
-def getTotalkWh(dataList):
-    df = getkWhPerDay(dataList)
+def getTotalkWh(dataList,sampleRate):
+    df = getkWhPerDay(dataList,sampleRate)
     sum = df.sum(axis=1)
     totalsum = sum.sum()
     return totalsum

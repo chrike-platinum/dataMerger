@@ -23,6 +23,7 @@ def foot2(canvas,doc):
 #normal frame as for SimpleFlowDocument
 frameT = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normal')
 
+
 #Two Columns
 frame1 = Frame(doc.leftMargin, doc.bottomMargin, doc.width/2-6, doc.height, id='col1')
 frame2 = Frame(doc.leftMargin+doc.width/2+6, doc.bottomMargin, doc.width/2-6,

@@ -29,7 +29,7 @@ class Project(object):
         self.totalkWP=float(totalData[0].replace(',','.'))
         self.totalkw=float(totalData[1].replace(',','.'))
         #self.totAvg=float(totalData[2].replace(',','.'))
-        self.totExtra=totalData[3]
+        self.totExtra=totalData[2]
 
 
         self.inverterTypes=[x[0] for x in inverterData]
@@ -37,10 +37,9 @@ class Project(object):
         self.invertersTotKWP=[float(x[1].replace(',','.')) for x in inverterData]
 
         self.invertersTotkw=[float(x[2].replace(',','.')) for x in inverterData]
-        #self.invertersAvg=[float(x[3].replace(',','.')) for x in inverterData]
-        self.invertersExtra=[x[4] for x in inverterData]
-        self.inverterFilePaths=[x[5] for x in inverterData]
-        self.inverterColumnNumbers=[int(x[6]) if x[6]!="" else 1 for x in inverterData]
+        self.invertersExtra=[x[3] for x in inverterData]
+        self.inverterFilePaths=[x[4] for x in inverterData]
+        self.inverterColumnNumbers=[int(x[5]) if x[5]!="" else 1 for x in inverterData]
 
 
         self.cleaningDates=maintanceData[0]
@@ -62,14 +61,15 @@ class Project(object):
     def __getitem__(self, item):
         return getattr(self, item)
 
-    def updateInverterData(self):
+    def updateInverterData(self,sampleRate):
         i=0
         listOfDF=[]
         for path,col,inverterType in zip(self.inverterFilePaths,self.inverterColumnNumbers,self.inverterTypes):
-                print('fetch')
-                listOfDF.append(DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i)))
+                listOfDF.append(DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i),sampleRate))
                 i+=1
         self.inverterData = pd.concat(listOfDF,axis=1,ignore_index=False)
+
+
 
     def getInverterDatafromTo(self,beginDate,endDate):
         return self.inverterData[beginDate:endDate]
@@ -79,7 +79,6 @@ class Project(object):
         beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
         endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
-        print(df[df.columns[0]])
         return df[df.columns[0]][beginDate:endDate].mean()
 
     def getGII(self,begindateString,enddateString):
