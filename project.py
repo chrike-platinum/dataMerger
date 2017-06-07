@@ -4,6 +4,7 @@ import pandas as pd
 import datetime
 from datetime import timedelta, date
 import CalculationEngine as CE
+from inverter import Inverter
 
 class Project(object):
 
@@ -41,6 +42,20 @@ class Project(object):
         self.inverterFilePaths=[x[4] for x in inverterData]
         self.inverterColumnNumbers=[int(x[5]) if x[5]!="" else 1 for x in inverterData]
 
+        self.inverters =[]
+        inverterID=0
+        for inverterdat in inverterData:
+            type = inverterdat[0]
+            kWP=float(inverterdat[1].replace(',','.'))
+            kW=float(inverterdat[2].replace(',','.'))
+            extra =inverterdat[3]
+            filePath=inverterdat[4]
+            if (x[5]!=""):
+                columnNumber=int(inverterdat[5])
+            else:
+                columnNumber=1
+            inverter = Inverter(type,kWP,kW,extra,filePath,columnNumber,[])
+            self.inverters.append((inverterID,inverter))
 
         self.cleaningDates=maintanceData[0]
         self.commentList = [ExtraData]
@@ -51,12 +66,7 @@ class Project(object):
 
         self.GHIdf=GHIdf
 
-
-
-
-
-
-        self.inverterData=[]
+        #self.inverterData=[]
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -64,15 +74,31 @@ class Project(object):
     def updateInverterData(self,sampleRate):
         i=0
         listOfDF=[]
-        for path,col,inverterType in zip(self.inverterFilePaths,self.inverterColumnNumbers,self.inverterTypes):
-                listOfDF.append(DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i),sampleRate))
+        inverterFilePaths = []
+        inverterColumnNumbers=[]
+        inverterTypes=[]
+        for invertertuple in self.inverters:
+            inverterFilePaths.append(invertertuple[1].filePath)
+            inverterColumnNumbers.append(invertertuple[1].columnNumber)
+            inverterTypes.append(invertertuple[1].type)
+
+        for path,col,inverterType in zip(inverterFilePaths,inverterColumnNumbers,inverterTypes):
+                inverterData = DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i),sampleRate)
+                self.getInverter(i).updateInverterData(inverterData)
                 i+=1
-        self.inverterData = pd.concat(listOfDF,axis=1,ignore_index=False)
+
+        #
+
+    def getAllInverterDatafromTo(self,projectDateBeginString,projectDateEndString):
+        listOfDF=[]
+        for invertertuple in self.inverters:
+            listOfDF.append(invertertuple[1].inverterData)
+        df = pd.concat(listOfDF,axis=1,ignore_index=False)
+        return df[projectDateBeginString:projectDateEndString]
 
 
-
-    def getInverterDatafromTo(self,beginDate,endDate):
-        return self.inverterData[beginDate:endDate]
+    def getInverter(self,inverterID):
+        return self.inverters[inverterID][1]
 
 
     def getGHI(self,begindateString,enddateString):

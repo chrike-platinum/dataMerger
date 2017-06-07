@@ -249,16 +249,14 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     plotDates=[]
     plotlines = []
     for inverterName in kWhPerDay.columns.values:
-        kWhPerDay2=kWhPerDay[kWhPerDay.columns[inverterID]]/project.invertersTotKWP[inverterID]
+        inverter = project.getInverter(inverterID)
+        kWhPerDay2=kWhPerDay[kWhPerDay.columns[inverterID]]/inverter.kWP
         color = next(colorPool)
         line = p3.line(x=kWhPerDay2.index.values,y=kWhPerDay2,color=color)
         plotlines.append(('Inv '+str(inverterID+1),[line]))
         plotDates = [createReadableDate(date) for date in kWhPerDay2.index.values]
         plotDates = [datetime.datetime.strptime(d,'%d/%m/%Y').date() for d in plotDates]
         ax.plot(plotDates,kWhPerDay2,label='Inv '+str(inverterID),color=color,linewidth='1')
-        #avg = [avgkwhKWP]*len(kWhPerDay.index.values)#/project.invertersTotKWP[inverterID]]*len(kWhPerDay.index.values)
-        #p3.line(x=kWhPerDay2.index.values,y=avg,legend='Inv '+str(inverterID+1)+' (avg)',color='light'+color)
-        #plt.plot(kWhPerDay2.index.values,avg,label='Inv '+str(inverterID)+' (avg)',color='light'+color)
         inverterID +=1
 
     GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
@@ -277,7 +275,11 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
     #p3.line(x=kWhPerDay.index.values,y=kWhPerDay,legend='I '+str(inverterID)+': inverterName')
 
-    minkWP=min(project.invertersTotKWP)
+    list = []
+    for inverter in project.inverters:
+        list.append(inverter[1].kWP)
+
+    minkWP=min(list)
     dfMaxkWh=(kWhPerDay/minkWP).max().max()
     p3.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
 
@@ -312,8 +314,8 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     inverterLayout = []
     for inverterName in kWhPerDay.columns.values:
         totalGenerated = kWhPerDay[kWhPerDay.columns[inverterID2]].sum()
-
-        realDailyAvg=round(totalGenerated/project.invertersTotKWP[inverterID2]/len(kWhPerDay.index.values),2)
+        inverter = project.getInverter(inverterID2)
+        realDailyAvg=round(totalGenerated/inverter.kWP/len(kWhPerDay.index.values),2)
         GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
 
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
@@ -328,10 +330,10 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
 
         leftlist = [('Real performance ratio',str(PR)+'%'),('Real total production',str(int(round(totalGenerated)))+' kWh'),
-                     ('Real daily average',str(realDailyAvg)+' kWh/kWP'),('Real daily average',str(realDailyAvg*project.invertersTotKWP[inverterID2])+' kWh')]
+                     ('Real daily average',str(realDailyAvg)+' kWh/kWP'),('Real daily average',str(realDailyAvg*inverter.kWP)+' kWh')]
 
-        rightlist=[('Inverter type',str(project.inverterTypes[inverterID2])),('Installed capacity',str(project.invertersTotKWP[inverterID2])+' kWP'),('Nominal installed capacity',str(project.invertersTotkw[inverterID2])+' kW'),
-                   ('Expected daily average',str(expDailyAvg)+' kWh/kWP'),('Expected daily average',str(round((expDailyAvg*project.invertersTotKWP[inverterID2]),2))+' kWh')]
+        rightlist=[('Inverter type',str(inverter.type)),('Installed capacity',str(inverter.kWP)+' kWP'),('Nominal installed capacity',str(inverter.kW)+' kW'),
+                   ('Expected daily average',str(expDailyAvg)+' kWh/kWP'),('Expected daily average',str(round((expDailyAvg*inverter.kW),2))+' kWh')]
 
         inverterLayout.append(createInfoInverterPart(project,'inverter '+str(inverterID2+1),'Performance indicators:',leftlist,'Inverter information:',rightlist))
         inverterID2+=1
@@ -390,7 +392,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
             )
 
 ####ADD kW DATA
-        df = project.getInverterDatafromTo(projectDateBeginString,projectDateEndString)
+        df = project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString)
         dfMax=df.max().max()
         p.y_range=Range1d(-0.5, 1.3*dfMax)
 
@@ -408,7 +410,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         #plotDates = [createReadableDate(date) for date in plotDates]
 
 
-        for inverter in project.inverterData.columns:
+        for inverter in project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString).columns:
             color = next(colorPool)
             line = p.line(x=df.index.values,y=df[inverter],color=color)
             ax1.plot(plotDates,df[inverter],label='Inv '+str(inverterID3),color=color,linewidth='1')
@@ -827,7 +829,7 @@ def collectData():
 
 
     project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf,str(sampleRate.value))
-    inputData=(project.name,project.getInverterDatafromTo(projectDateBeginString,projectDateEndString))
+    inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
     print('input',inputData)
 
 
