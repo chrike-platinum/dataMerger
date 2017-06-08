@@ -438,7 +438,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         meansLabel = [str(int(round(100*(x),0)))+'%' for x in cloudData.values.tolist()]
 
 
-        beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(2, 'D')
+        beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(1, 'D')
 
         cloudDataShiftIndex = np.insert(cloudDataShiftIndex,0,beginLabelCloud)
         xcloud = cloudDataShiftIndex
@@ -469,7 +469,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         rainLabel = [str(int(round(100*(x),0)))+'%' for x in rain.values.tolist()]
 
 
-        beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(2, 'D')
+        beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(1, 'D')
         #rainDataShiftIndex = np.insert(rainDataShiftIndex,0,beginLabelRain)
         rainDataShiftIndex = np.r_[beginLabelRain, rainDataShiftIndex]
         offset=0
@@ -818,6 +818,7 @@ def conversion(old):
 def collectData():
 
 
+
     checklist = ["N", "n", "W","w","E","e","S","s","O",'o','Z','z']
     if (len([e for e in checklist if e in projectLatitude.value]) >=1):
         projectLatitudeCon = conversion(projectLatitude.value.decode('utf-8'))
@@ -858,12 +859,17 @@ def collectData():
     maintancelist=[cleaningData,gridProbData,maintanceData,internetProbData]
 
     projectDateBeginString=str(projectDateBegin.value)
-    projectDateEndString =str(projectDateEnd.value)
+    projectDateBeginString = datetime.datetime.strptime(projectDateBeginString, '%d-%m-%Y %H:%M:%S')
+    projectDateBeginString = projectDateBeginString.strftime("%Y-%m-%d %H:%M:%S")
 
+    projectDateEndString =str(projectDateEnd.value)
+    projectDateEndString = datetime.datetime.strptime(projectDateEndString, '%d-%m-%Y %H:%M:%S')
+    projectDateEndString = projectDateEndString.strftime("%Y-%m-%d %H:%M:%S")
 
     ExtraData = str(extraComments.value)
     reportNumber = str(reportNumberTxt.value)
-    GHIdf = CE.collectSolarisData(solargisLocation.value,solargisYear.value)
+    GHIdf = CE.collectSolarisData(solargisLocation.value,str(projectDateBegin.value)[6:10])
+
 
 
     project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf,str(sampleRate.value))
@@ -938,7 +944,7 @@ def createNewProjectScreen(quickReport=False):
     global projectNameTxt,reportNumberTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
     global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,sampleRate
     global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2
-    global cleaningDate,extraComments,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation,solargisYear
+    global cleaningDate,extraComments,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation
     div0 = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
     global fileColumn1,fileColumn2
@@ -969,8 +975,8 @@ def createNewProjectScreen(quickReport=False):
 
 
 
-    projectDateBegin = TextInput(value="2017-04-01 00:00:00", title="Begin date report:")
-    projectDateEnd = TextInput(value="2017-04-30 23:45:00", title="End date report:")
+    projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date report:")
+    projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date report:")
 
     div = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
@@ -1014,7 +1020,7 @@ def createNewProjectScreen(quickReport=False):
 
     extraComments = TextInput(value="Here is a comment...", title="Comments:")
     solargisLocation = TextInput(value='/Users/christiaan/Desktop/Solcor/dataMergeWeek/NDC_PV-8627-1705-1780_-31.783--70.984.xls', title="Solargis file location:")
-    solargisYear = TextInput(value='2017', title="Solargis file year:")
+
 
 
 
@@ -1033,7 +1039,7 @@ def createNewProjectScreen(quickReport=False):
 
     newLayout = [[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],[],
                  [div],[total,totalkw,sampleRate,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Extra],
-                 [div3],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments],[solargisLocation,solargisYear],[nextButton,buttonBack,buttonAddInverter]]
+                 [div3],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation],[nextButton,buttonBack,buttonAddInverter]]
 
 
     globNewLayout.children = []
