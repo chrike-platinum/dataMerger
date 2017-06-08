@@ -905,13 +905,13 @@ def insertInverterLayout():
     inverterXType = TextInput(value="20000TL-30", title="Inverter "+str(inverterID)+" type:")
 
 
-    inverterXTotKWP = TextInput(value="20,5", title="Inverter X"+str(inverterID)+" installed cap xx[kWP]:")
-    inverterXTotKW = TextInput(value="20", title="Inverter X"+str(inverterID)+" installed cap xx[kW]:")
+    inverterXTotKWP = TextInput(value="20,5", title="Inverter "+str(inverterID)+" installed cap [kWP]:")
+    inverterXTotKW = TextInput(value="20", title="Inverter "+str(inverterID)+" installed cap [kW]:")
     #inverter1Avg = TextInput(value="4.87", title="Inverter x exp. daily avg. [kWh/KWP]:")
-    inverterXExtra = TextInput(value="", title="InverterX "+str(inverterID)+" EXTRA:")
+    inverterXExtra = TextInput(value="", title="Inverter "+str(inverterID)+" EXTRA:")
 
     filePickX = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter "+str(inverterID)+" data:")
-    fileColumnX = TextInput(value="1", title="InverterX "+str(inverterID)+" column nr in file:")
+    fileColumnX = TextInput(value="1", title="Inverter "+str(inverterID)+" column nr in file:")
 
     inverterXRow1= [inverterXType,filePickX,fileColumnX]
     inverterXRow2= [inverterXTotKWP,inverterXTotKW,inverterXExtra]
@@ -919,10 +919,10 @@ def insertInverterLayout():
     divX = [Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)]
 
+    oldLayout.insert(12+3*inverterClickCounter,divX)
+    oldLayout.insert(13+3*inverterClickCounter,inverterXRow1)
+    oldLayout.insert(14+3*inverterClickCounter,inverterXRow2)
 
-    oldLayout.insert(12+3*inverterClickCounter,inverterXRow1)
-    oldLayout.insert(13+3*inverterClickCounter,inverterXRow2)
-    oldLayout.insert(14+3*inverterClickCounter,divX)
 
 
     updatedLayout = oldLayout[:]
@@ -931,7 +931,36 @@ def insertInverterLayout():
 
     inverterClickCounter+=1
 
+    print('counter',inverterClickCounter)
+
     inverterLabels.append([inverterXType,inverterXTotKWP,inverterXTotKW,inverterXExtra,filePickX,fileColumnX])
+
+def removeInverterLayout():
+    global inverterClickCounter
+    global inverterLabels
+    global globNewLayout
+    global newLayout
+    oldLayout=newLayout
+
+    if inverterClickCounter !=0:
+
+        inverterClickCounter-=1
+        print('counter',inverterClickCounter)
+
+        del oldLayout[12+3*inverterClickCounter]
+        del oldLayout[12+3*inverterClickCounter]
+        del oldLayout[12+3*inverterClickCounter]
+
+
+        updatedLayout = oldLayout[:]
+        globNewLayout.children = []
+        globNewLayout.children=[layout(updatedLayout)]
+
+
+
+
+
+
 
 
 
@@ -961,7 +990,7 @@ def createNewProjectScreen(quickReport=False):
     projectTelephoneTxt = TextInput(value="", title="Telephone:")
 
     div0 = Div(text="""<hr noshade size=4 color=green>""",
-        width=1000, height=30)
+        width=1100, height=30)
 
     projectOrientation =TextInput(value="-10", title="Project orientation:")
     projectInclination = TextInput(value="15", title="Project inclination:")
@@ -979,7 +1008,7 @@ def createNewProjectScreen(quickReport=False):
     projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date report:")
 
     div = Div(text="""<hr noshade size=4 color=green>""",
-        width=1000, height=30)
+        width=1100, height=30)
 
 
     total = TextInput(value="46", title="Total installed cap [kWP]:")
@@ -989,7 +1018,7 @@ def createNewProjectScreen(quickReport=False):
 
 
     div2 = Div(text="""<hr noshade size=4 color=green>""",
-        width=1000, height=30)
+        width=1100, height=30)
 
 
     inverter1Type = TextInput(value="25000TL-30", title="Inverter 1 type:")
@@ -1006,7 +1035,7 @@ def createNewProjectScreen(quickReport=False):
 
     inverterLabels.append([inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1])
 
-    div3 = Div(text="""<hr noshade size=4 color=green>""",width=1000, height=30)
+    div3 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
 
 
     cleaningDate = TextInput(value="", title="Cleaning date(s):")
@@ -1022,13 +1051,16 @@ def createNewProjectScreen(quickReport=False):
     solargisLocation = TextInput(value='/Users/christiaan/Desktop/Solcor/dataMergeWeek/NDC_PV-8627-1705-1780_-31.783--70.984.xls', title="Solargis file location:")
 
 
-
+    div4 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
 
     buttonBack = Button(label="Back")
     buttonBack.on_click(goToHomescreen)
 
     buttonAddInverter = Button(label="Add inverter")
     buttonAddInverter.on_click(partial(insertInverterLayout,))
+
+    buttonRemoveInverter = Button(label="Remove inverter")
+    buttonRemoveInverter.on_click(partial(removeInverterLayout,))
 
     nextButton = None
     if quickReport:
@@ -1039,7 +1071,7 @@ def createNewProjectScreen(quickReport=False):
 
     newLayout = [[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],[],
                  [div],[total,totalkw,sampleRate,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Extra],
-                 [div3],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation],[nextButton,buttonBack,buttonAddInverter]]
+                 [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation],[buttonBack,nextButton]]
 
 
     globNewLayout.children = []
