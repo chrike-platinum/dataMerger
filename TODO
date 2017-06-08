@@ -1,10 +1,12 @@
 check sample rate
 make pdf
-make adding inverters dynamic
+make removing inverters dynamic
 delete year input solargis file
 possible to change the kw to W
-smarter inverter format, make inverter class with type
+
 
 
 /Users/christiaan/PycharmProjects/dataMerger/SolcorDashboard.py:831: FutureWarning: to_datetime is deprecated. Use self.to_pydatetime()
   GHIdf = CE.collectSolarisData(solargisLocation.value,solargisYear.value)
+
+check directories with accents

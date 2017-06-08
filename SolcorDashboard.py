@@ -299,7 +299,7 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     ax.xaxis.grid(linewidth=0.5,which='minor')
     ax.yaxis.grid(linewidth=0.5,which='major')
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
-          ncol=4, fancybox=True)
+          ncol=8, fancybox=True)
     myFmt = mdates.DateFormatter('%d %B %Y')
     ax.xaxis.set_major_formatter(myFmt)
 
@@ -497,13 +497,14 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         printObject.nrOfCloudyDays=amountOfCloudDays
         printObject.nrOfRainyDays=amountOfRainDays
 
-        cleaningDatesString=[createReadableDate(str(cleaning.date())) for cleaning in project.cleaningDates]
-        internetProbString = [createReadableDate(str(internetProb.date())) for internetProb in project.internetProblems]
-        gridProbString = [createReadableDate(str(gridProb.date())) for gridProb in project.gridProblemData]
-        maintenaceString = [createReadableDate(str(maintenace.date())) for maintenace in project.maintenanceData]
+        cleaningDatesString=[createReadableDate(str(cleaning.date()))[0:5] for cleaning in project.cleaningDates]
+        internetProbString = [createReadableDate(str(internetProb.date()))[0:5] for internetProb in project.internetProblems]
+        gridProbString = [createReadableDate(str(gridProb.date()))[0:5] for gridProb in project.gridProblemData]
+        maintenaceString = [createReadableDate(str(maintenace.date()))[0:5] for maintenace in project.maintenanceData]
         extraCommentString = [str(comment) for comment in project.commentList]
+        extraCommentString=" ".join(extraCommentString)
+        extraCommentString=re.sub("(.{80})", "\\1\n", extraCommentString, 0, re.DOTALL)
 
-        print('extracommentSTRING--------------',extraCommentString)
 
         printObject.cleaningDatestring=cleaningDatesString
         printObject.internetProbString=internetProbString
@@ -586,7 +587,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         ax1.xaxis.grid(linewidth=0.5,which='minor')
         ax1.yaxis.grid(linewidth=0.5,which='major')
         ax1.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
-              ncol=4, fancybox=True)
+              ncol=8, fancybox=True)
         myFmt = mdates.DateFormatter('%d %B %Y')
         ax1.xaxis.set_major_formatter(myFmt)
 
@@ -705,7 +706,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         ax1.xaxis.grid(linewidth=0.5,which='minor')
         ax1.yaxis.grid(linewidth=0.5,which='major')
         ax1.legend(h1+h2, l1+l2,loc='upper center', bbox_to_anchor=(0.5, 1.1),
-              ncol=4, fancybox=True)
+              ncol=8, fancybox=True)
         myFmt = mdates.DateFormatter('%d %B %Y')
         ax1.xaxis.set_major_formatter(myFmt)
 
@@ -831,9 +832,16 @@ def collectData():
     geoData = [projectLatitudeCon,projectLongitudeCon,str(projectLatitude.value),str(projectLongitude.value)]
     adresData = [str(x.value) for x in [projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt]]
     totalData = [str(x.value) for x in [total,totalkw,totExtra]]
-    inverter1Data =[str(x.value) for x in [inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1] ]
-    inverter2Data = [str(x.value) for x in [inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2,fileColumn2]]
-    InverterData = [inverter1Data,inverter2Data]
+    #inverter1Data =[str(x.value) for x in [inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1] ]
+    #inverter2Data = [str(x.value) for x in [inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2,fileColumn2]]
+
+
+    InverterData=[]
+    for inverter in inverterLabels:
+        InverterData.append([str(x.value) for x in inverter])
+
+
+    #InverterData = [inverter1Data,inverter2Data]
     cleaningData = cleaningDate.value.split(',')
     cleaningData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in cleaningData if str(pd.to_datetime(x)) != 'NaT']
 
@@ -881,9 +889,52 @@ def collectData():
     showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
 
 
+def insertInverterLayout():
+    global inverterClickCounter
+    global inverterLabels
+    global globNewLayout
+    global newLayout
+    oldLayout=newLayout
+    inverterID = inverterClickCounter+2
+    inverterXType = TextInput(value="20000TL-30", title="Inverter "+str(inverterID)+" type:")
+
+
+    inverterXTotKWP = TextInput(value="20,5", title="Inverter X"+str(inverterID)+" installed cap xx[kWP]:")
+    inverterXTotKW = TextInput(value="20", title="Inverter X"+str(inverterID)+" installed cap xx[kW]:")
+    #inverter1Avg = TextInput(value="4.87", title="Inverter x exp. daily avg. [kWh/KWP]:")
+    inverterXExtra = TextInput(value="", title="InverterX "+str(inverterID)+" EXTRA:")
+
+    filePickX = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter "+str(inverterID)+" data:")
+    fileColumnX = TextInput(value="1", title="InverterX "+str(inverterID)+" column nr in file:")
+
+    inverterXRow1= [inverterXType,filePickX,fileColumnX]
+    inverterXRow2= [inverterXTotKWP,inverterXTotKW,inverterXExtra]
+
+    divX = [Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=30)]
+
+
+    oldLayout.insert(12+3*inverterClickCounter,inverterXRow1)
+    oldLayout.insert(13+3*inverterClickCounter,inverterXRow2)
+    oldLayout.insert(14+3*inverterClickCounter,divX)
+
+
+    updatedLayout = oldLayout[:]
+    globNewLayout.children = []
+    globNewLayout.children=[layout(updatedLayout)]
+
+    inverterClickCounter+=1
+
+    inverterLabels.append([inverterXType,inverterXTotKWP,inverterXTotKW,inverterXExtra,filePickX,fileColumnX])
+
+
+
 
 def createNewProjectScreen(quickReport=False):
+    global inverterClickCounter
+    inverterClickCounter=0
     global globNewLayout
+    global newLayout
     global projectNameTxt,reportNumberTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
     global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,sampleRate
     global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2
@@ -891,6 +942,8 @@ def createNewProjectScreen(quickReport=False):
     div0 = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
     global fileColumn1,fileColumn2
+    global inverterLabels
+    inverterLabels=[]
 
 
     projectNameTxt = TextInput(value="Nueces Del Choapa", title="Project name:")
@@ -943,20 +996,12 @@ def createNewProjectScreen(quickReport=False):
 
     filePick1 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter 1 data:")
     fileColumn1 = TextInput(value="2", title="Inverter 1 column nr in file:")
-    filePick2 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter 2 data:")
-    fileColumn2 = TextInput(value="1", title="Inverter 2 column nr in file:")
+
+
+    inverterLabels.append([inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1])
 
     div3 = Div(text="""<hr noshade size=4 color=green>""",width=1000, height=30)
 
-    inverter2Type = TextInput(value="20000TL-30", title="Inverter 2 type:")
-
-    inverter2Tot = TextInput(value="20,5", title="Inverter 2 installed cap [kWP]:")
-    inverter2Totkw = TextInput(value="20", title="Inverter 2 installed cap [kW]:")
-    #inverter2Avg = TextInput(value="4.87", title="Inverter 2 exp. daily avg. [kWh/kWP]:")
-    inveter2Extra = TextInput(value="", title="Inverter 2 EXTRA:")
-
-    div4 = Div(text="""<hr noshade size=4 color=green>""",
-        width=1000, height=30)
 
     cleaningDate = TextInput(value="", title="Cleaning date(s):")
     gridProbDate = TextInput(value="", title="Grid problem date(s):")
@@ -976,6 +1021,9 @@ def createNewProjectScreen(quickReport=False):
     buttonBack = Button(label="Back")
     buttonBack.on_click(goToHomescreen)
 
+    buttonAddInverter = Button(label="Add inverter")
+    buttonAddInverter.on_click(partial(insertInverterLayout,))
+
     nextButton = None
     if quickReport:
         nextButton=Button(label='Next')
@@ -985,13 +1033,14 @@ def createNewProjectScreen(quickReport=False):
 
     newLayout = [[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],[],
                  [div],[total,totalkw,sampleRate,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Extra],
-                 [div3],[inverter2Type,filePick2,fileColumn2],[inverter2Tot,inverter2Totkw,inveter2Extra],
-                 [div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation,solargisYear],[nextButton,buttonBack]]
+                 [div3],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments],[solargisLocation,solargisYear],[nextButton,buttonBack,buttonAddInverter]]
+
 
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
+    #insertInverterLayout(newLayout)
+    #print('lenupdate',len(upDatedLayout))
 
-    print('children',globNewLayout.children)
     #BIO.reset_output()
     #BIO.show(globNewLayout)
 
