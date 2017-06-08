@@ -117,7 +117,7 @@ def collectSolarisData(path,year):
     df_PV_column1 =df_PV[df_PV.columns[2]].to_frame()
     df_PV_column2 =df_PV[df_PV.columns[1]].to_frame()
 
-    print(df_PV)
+
     df_PV_PR_column=df_PV[df_PV.columns[5]].to_frame()
     dfPercent_column = (df_GII_column[df_GII_column.columns[0]]/df_GHI_column[df_GHI_column.columns[0]]).to_frame()
     df = pd.concat([df_GHI_column,df_GII_column,dfPercent_column,df_PV_column1,df_PV_column2,df_PV_PR_column],axis=1)

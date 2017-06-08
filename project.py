@@ -56,6 +56,7 @@ class Project(object):
                 columnNumber=1
             inverter = Inverter(type,kWP,kW,extra,filePath,columnNumber,[])
             self.inverters.append((inverterID,inverter))
+            inverterID+=1
 
         self.cleaningDates=maintanceData[0]
         self.commentList = [ExtraData]

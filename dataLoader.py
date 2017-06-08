@@ -29,7 +29,6 @@ def searchStartingRowCSV(dataPath,fileName):
     l=df.index.str.count(':').tolist()
     max1 = max(l)
     beginRow = l.index(max1)-1
-    print('beginRow',beginRow)
     dateIncluded = False
     if (len(df.index.values[beginRow+1]) < 13):
         print('searching for date in file name...')
@@ -94,7 +93,7 @@ def fetchFilesforProject(folderPath):
     if(len(listofFolders)>1):
         listofFolders = listofFolders[1:]
 
-    print(listofFolders)
+
     dataFramelist=[]
     headlist =[]
     for i in listofFolders:
@@ -148,15 +147,6 @@ newPath2 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/gabriel Varela'
 newPath3 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos'
 dataFileName11='170503_003.csv'
 
-
-
-
-#print(importCSVFile(newPath,dataFileName10))
-#df=combineAllData(importAllFilesFromFolder(newPath))
-#print(df)
-#print(fetchFilesforProject(newPath3))
-#plt.plot(df)
-#plt.show()
 
 
 

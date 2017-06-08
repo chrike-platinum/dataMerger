@@ -9,6 +9,7 @@ plotFileName = 'plot'
 
 
 
+
 from bokeh.layouts import widgetbox, row, column, layout
 from bokeh.models.widgets import CheckboxGroup
 from bokeh.models import Button, HoverTool
@@ -44,6 +45,9 @@ import matplotlib.dates as mdates
 from bokeh.models import Legend
 import pdfMaker as PM
 import urlparse, urllib
+from printObject import PrintObject
+
+printObject = PrintObject()
 
 #curdoc=curdoc()
 projects=[]
@@ -214,10 +218,6 @@ def createInfoInverterPart(project,title,listTitleLeft,listLeft,listTitleRight,l
 
     rightInfoList = column(divListRight)
 
-    #divLine = Div(text="""<hr noshade size=2 align="center">""",
-    #    width=800, height=10)
-
-
     allInfo = row([leftInfoList,rightInfoList])
     return column([divTitle,allInfo])
 
@@ -282,6 +282,7 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     minkWP=min(list)
     dfMaxkWh=(kWhPerDay/minkWP).max().max()
     p3.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
+    ax.set_ylim([-0.5, 1.2*dfMaxkWh])
 
 
     legend2 = Legend(items=plotlines,location=(55, 0)) #-30
@@ -325,8 +326,14 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
         PR=round(realDailyAvg/GIIdaily*100,1)
 
+
+
         #PR = round((totalGenerated/project.invertersTotKWP[inverterID2])/InplaneProduction,3)*100
 
+        printObject.invertersPR.append(str(PR))
+        printObject.invertersTotalGenerated.append(str(int(round(totalGenerated))))
+        printObject.invertersRealDailyAvgKWP.append(str(realDailyAvg))
+        printObject.invertersExpDailyAvgKWP.append(str(expDailyAvg))
 
 
         leftlist = [('Real performance ratio',str(PR)+'%'),('Real total production',str(int(round(totalGenerated)))+' kWh'),
@@ -346,7 +353,8 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
 def handlemakePDF(divPDF,project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory):
     divPDF.text ="""<p style="font-size:28px ;text-align: center">Creating PDF..."""
-    PM.makePDFReport(project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory)
+    #PM.makePDFReport(project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory)
+    PM.testPDF2(tempPlotDir,project,reportNumber,projectDateBeginString,projectDateEndString,printObject,isTechReportRequest=isTechReport)
     divPDF.text ="""<p style="font-size:28px ;text-align: center">PDF created!"""
 
 def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir):
@@ -356,7 +364,7 @@ def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain
     divPDF = Div(text="""<p style="font-size:28px ;text-align: center">Solcor""",
     width=600, height=100)
     buttonCreateExecReport.on_click(partial(handlemakePDF,divPDF,project,projectDateBeginString,projectDateEndString,False,reportNumber,tempPlotDir,outputDirectory))
-    buttonCreateTechnicalReport.on_click(partial(handlemakePDF,divPDF,project,projectDateBeginString,projectDateEndString,False,reportNumber,tempPlotDir,outputDirectory))
+    buttonCreateTechnicalReport.on_click(partial(handlemakePDF,divPDF,project,projectDateBeginString,projectDateEndString,True,reportNumber,tempPlotDir,outputDirectory))
 
 
 
@@ -486,6 +494,8 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 ######fill info banner
         leftlist = [('Number of cloudy days',amountOfCloudDays),('Number of rainy days',amountOfRainDays)]
+        printObject.nrOfCloudyDays=amountOfCloudDays
+        printObject.nrOfRainyDays=amountOfRainDays
 
         cleaningDatesString=[createReadableDate(str(cleaning.date())) for cleaning in project.cleaningDates]
         internetProbString = [createReadableDate(str(internetProb.date())) for internetProb in project.internetProblems]
@@ -493,6 +503,13 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         maintenaceString = [createReadableDate(str(maintenace.date())) for maintenace in project.maintenanceData]
         extraCommentString = [str(comment) for comment in project.commentList]
 
+        print('extracommentSTRING--------------',extraCommentString)
+
+        printObject.cleaningDatestring=cleaningDatesString
+        printObject.internetProbString=internetProbString
+        printObject.gridProbString=gridProbString
+        printObject.maintenaceString=maintenaceString
+        printObject.extraCommentString=extraCommentString
 
         rightlist = [('Cleaning dates',str(cleaningDatesString)),('Internet problems dates',str(internetProbString)),
                      ('Grid Problems dates',str(gridProbString)),('Maintenance dates',str(maintenaceString)),('Comment',str(extraCommentString))]
@@ -726,10 +743,24 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         #PR = round((totalGenerated/project.totalkWP)/InplaneProduction,3)*100
         print('PR:'+str(PR))
 
+        printObject.totPR=PR
+        printObject.totalGenerated=totalGenerated
+        printObject.totRealDailyAvg = realDailyAvg
+        printObject.GHIdaily=GHIdaily
+        printObject.GIIdaily=GIIdaily
+
+        printObject.expPR=expPR
+        printObject.expDailyAvg=expDailyAvg
+        printObject.totalKWhPerday=totalKWhPerday
+        printObject.realDailyAvg=realDailyAvg
+        printObject.underperfDays=underperfDays
+        printObject.overperfDays=overperfDays
 
 
 
-        leftlist = [('Real performance ratio',str(PR)+'%'),('GHI daily',str(GHIdaily)+' kWh/m^2'),('GII daily',str(GIIdaily)+' kWh/m^2'),('Real total production',str(int(round(totalGenerated)))+' kWh'),
+
+
+        leftlist = [('Real performance ratio',str(PR)+'%'),('GHI daily',str(GHIdaily)+' kWh/m^2'),('GII daily',str(GIIdaily)+' kWh/m^2'),('Real total production',str(round(totalGenerated,2))+' kWh'),
                      ('Real daily average',str(realDailyAvg)+' kWh/kWP'),('Real daily average',str(realDailyAvg*project.totalkWP)+' kWh')]
         rightlist = [('Expected performance ratio',str(expPR)+ '%'),('Expected daily average',str(expDailyAvg)+' kWh/kWP'),
                      ('Expected daily average',str(round((expDailyAvg*project.totalkWP),2))+' kWh'),('Expected monthly production',str(round((expDailyAvg*project.totalkWP*len(totalKWhPerday)),2))+' kWh'),('Number of underperforming days',underperfDays),('Number of overperforming days',overperfDays)]
@@ -778,7 +809,6 @@ def conversion(old):
     new = new.split()
     new_dir = new.pop()
     new.extend([0,0,0])
-    print(new)
     return (float(new[0])+float(new[1])/60.0+float(new[2])/3600.0) * direction[new_dir]
 
 
@@ -823,14 +853,14 @@ def collectData():
     projectDateEndString =str(projectDateEnd.value)
 
 
-    ExtraData = extraComments.value
+    ExtraData = str(extraComments.value)
     reportNumber = str(reportNumberTxt.value)
     GHIdf = CE.collectSolarisData(solargisLocation.value,solargisYear.value)
 
 
     project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf,str(sampleRate.value))
     inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
-    print('input',inputData)
+
 
 
     kWhPerDay = CE.getkWhPerDay(inputData,str(sampleRate.value))
@@ -849,9 +879,6 @@ def collectData():
 
 
     showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
-
-
-
 
 
 
@@ -964,7 +991,7 @@ def createNewProjectScreen(quickReport=False):
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
 
-
+    print('children',globNewLayout.children)
     #BIO.reset_output()
     #BIO.show(globNewLayout)
 

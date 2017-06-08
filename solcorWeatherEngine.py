@@ -84,7 +84,6 @@ def requestCloudDataFile(startDate,endDate,lat,lng):
         df = df.set_index('time')
         fileName=str(startDate)+' '+str(endDate)+' '+str(lat)+str(lng)
         df.to_csv('weatherDataCache/'+fileName, sep='\t')
-        print(df)
     print('result',fileName)
     return fileName
 
@@ -102,18 +101,17 @@ def cached(startDate,endDate,lat,lng):
         if str(lat)+str(lng) in file:
             possibleFiles.append(file)
 
-    print(possibleFiles)
 
     endList=[]
     for posFile in possibleFiles:
         startDateFile = pd.to_datetime(posFile.split(' ')[0]+' '+posFile.split(' ')[1])
-        print('string',posFile.split(' ')[0])
+        #print('string',posFile.split(' ')[0])
         endDateFile = pd.to_datetime(posFile.split(' ')[2]+' '+posFile.split(' ')[3])
         startDate=pd.to_datetime(startDate)
         endDate=pd.to_datetime(endDate)
 
-        print('start',startDateFile)
-        print('end',endDateFile)
+       # print('start',startDateFile)
+       # print('end',endDateFile)
         if (startDateFile <= startDate) and (endDateFile >= endDate):
             endList.append(posFile)
 
