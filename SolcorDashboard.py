@@ -46,6 +46,7 @@ from bokeh.models import Legend
 import pdfMaker as PM
 import urlparse, urllib
 from printObject import PrintObject
+import dataHandler as DH
 
 printObject = PrintObject()
 
@@ -815,9 +816,7 @@ def conversion(old):
 
 
 
-def collectData():
-
-
+def collectData(saveData=False):
 
     checklist = ["N", "n", "W","w","E","e","S","s","O",'o','Z','z']
     if (len([e for e in checklist if e in projectLatitude.value]) >=1):
@@ -873,26 +872,17 @@ def collectData():
 
 
     project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf,str(sampleRate.value))
-    inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
+    if (saveData==True):
+        print('Saving project to database...')
+        DH.saveProject(project)
+    else:
+        inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
+        kWhPerDay = CE.getkWhPerDay(inputData,str(sampleRate.value))
+        totalkWh = CE.getTotalkWh(inputData,str(sampleRate.value))
+        cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
+        rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
+        showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
 
-
-
-    kWhPerDay = CE.getkWhPerDay(inputData,str(sampleRate.value))
-
-    totalkWh = CE.getTotalkWh(inputData,str(sampleRate.value))
-
-
-
-
-
-
-
-    cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-    rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-
-
-
-    showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
 
 
 def insertInverterLayout():
@@ -919,9 +909,9 @@ def insertInverterLayout():
     divX = [Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)]
 
-    oldLayout.insert(12+3*inverterClickCounter,divX)
-    oldLayout.insert(13+3*inverterClickCounter,inverterXRow1)
-    oldLayout.insert(14+3*inverterClickCounter,inverterXRow2)
+    oldLayout.insert(13+3*inverterClickCounter,divX)
+    oldLayout.insert(14+3*inverterClickCounter,inverterXRow1)
+    oldLayout.insert(15+3*inverterClickCounter,inverterXRow2)
 
 
 
@@ -947,21 +937,14 @@ def removeInverterLayout():
         inverterClickCounter-=1
         print('counter',inverterClickCounter)
 
-        del oldLayout[12+3*inverterClickCounter]
-        del oldLayout[12+3*inverterClickCounter]
-        del oldLayout[12+3*inverterClickCounter]
+        del oldLayout[13+3*inverterClickCounter]
+        del oldLayout[13+3*inverterClickCounter]
+        del oldLayout[13+3*inverterClickCounter]
 
 
         updatedLayout = oldLayout[:]
         globNewLayout.children = []
         globNewLayout.children=[layout(updatedLayout)]
-
-
-
-
-
-
-
 
 
 
@@ -979,6 +962,16 @@ def createNewProjectScreen(quickReport=False):
     global fileColumn1,fileColumn2
     global inverterLabels
     inverterLabels=[]
+
+    if (quickReport):
+        title="Create quick report"
+    else:
+        title="Add new project"
+    headingTxt = Div(text="""<p style="font-size:20px;text-align: center">"""+title,
+            width=1200, height=30)
+
+    headingDiv = Div(text="""<hr noshade size=4 color=green>""",
+        width=1200, height=30)
 
 
     projectNameTxt = TextInput(value="Nueces Del Choapa", title="Project name:")
@@ -1044,9 +1037,6 @@ def createNewProjectScreen(quickReport=False):
     internetProblemDate = TextInput(value="", title="Internet problem date(s):")
 
 
-
-
-
     extraComments = TextInput(value="Here is a comment...", title="Comments:")
     solargisLocation = TextInput(value='/Users/christiaan/Desktop/Solcor/dataMergeWeek/NDC_PV-8627-1705-1780_-31.783--70.984.xls', title="Solargis file location:")
 
@@ -1068,22 +1058,98 @@ def createNewProjectScreen(quickReport=False):
         nextButton.on_click(collectData)
     else:
         nextButton = Button(label='Add project')
-
-    newLayout = [[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],[],
+        nextButton.on_click(partial(collectData,saveData=True))
+    newLayout = [[headingTxt],[headingDiv],[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],
                  [div],[total,totalkw,sampleRate,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Extra],
                  [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation],[buttonBack,nextButton]]
 
 
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
-    #insertInverterLayout(newLayout)
-    #print('lenupdate',len(upDatedLayout))
 
-    #BIO.reset_output()
-    #BIO.show(globNewLayout)
 
-def function_to_call(attr, old, new):
-    return None
+
+
+def saveSettings(middleLayout):
+    settings=[]
+    for setting in middleLayout:
+        settings.append((setting.title,setting.value))
+    print('New settings: '+str(settings))
+    DH.setSettings(settings)
+    goToHomescreen()
+
+def resetSettings():
+    DH.resetSettings()
+    showSettingsScreen()
+
+
+def showSettingsScreen():
+    global globNewLayout
+    headingTxt = Div(text="""<p style="font-size:20px;text-align: center"> Settings """,
+            width=1000, height=30)
+    div = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=30)
+
+
+    settingsDict=DH.getSettings()
+    middleLayout=[]
+    for settingLabel in settingsDict:
+        middleLayout.append(TextInput(value=str(settingsDict[settingLabel]), title=settingLabel))
+
+
+    saveSettingsButton=Button(label='Save settings')
+    saveSettingsButton.on_click(partial(saveSettings,middleLayout))
+
+    buttonBack = Button(label="Back")
+    buttonBack.on_click(goToHomescreen)
+
+    resetButton = Button(label="Reset settings")
+    resetButton.on_click(resetSettings)
+
+
+    lay = layout([[headingTxt],[div],middleLayout,[saveSettingsButton],[resetButton],[buttonBack]])
+
+    globNewLayout.children = []
+    globNewLayout.children =[lay]
+
+
+def showPreInspection(ID):
+    project = DH.getProject(int(ID[2:]))
+    global globNewLayout
+
+    headingTxt = Div(text="""<p style="font-size:20px;text-align: center"> """+str(project.name),
+            width=1000, height=30)
+
+    div = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=20)
+
+    title1Txt = Div(text="""<p style="font-size:16px;text-align: left"><u> Inspection period:</u>""",
+            width=180, height=10)
+    projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date:")
+    projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date:")
+
+    inspectButton = Button(label="Inspect")
+
+    sepdiv = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=20)
+
+    buttonBack = Button(label="Back")
+    buttonBack.on_click(goToHomescreen)
+
+    lay = layout([[headingTxt],[div],[title1Txt],[projectDateBegin,projectDateEnd,inspectButton],[sepdiv],[buttonBack]])
+
+    globNewLayout.children = []
+    globNewLayout.children =[lay]
+
+
+
+
+
+
+def inspectProject(attr, old, new):
+    showPreInspection(new)
+
+
 def homescreen(firstTime):
     global globNewLayout
 
@@ -1093,13 +1159,15 @@ def homescreen(firstTime):
     div = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
 
+
     buttonOngoingProjects = Button(label="Project dashboard",)
     #buttonOngoingProjects.on_click(partial(showProjectMenu, TotalData,means,magnification,kWhPerDay,totalkWh,rain))
 
     buttonAddNewProject = Button(label="Add new project")
     buttonAddNewProject.on_click(partial(createNewProjectScreen,))
 
-    menu = [("Project 1", "item_1"), ("Project 2", "item_2"), ("Project 3", "item_3")]
+
+    menu = [(str(project.name),"ID"+str(project.DBID)) for project in DH.getAllSavedProjects()]
 
     manageDropDown = Dropdown(label="Manage projects", button_type="warning", menu=menu)
 
@@ -1111,10 +1179,11 @@ def homescreen(firstTime):
     buttonCreateQuickReport.on_click(partial(createNewProjectScreen,quickReport=True))
 
     buttonSettings = Button(label="Settings")
+    buttonSettings.on_click(showSettingsScreen)
 
 
-    inspectdropdown.on_change('value', function_to_call)
-    inspectdropdown.on_click(function_to_call)
+    inspectdropdown.on_change('value', partial(inspectProject))
+    #inspectdropdown.on_click(function_to_call)
 
 
 

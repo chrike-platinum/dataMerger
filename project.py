@@ -33,14 +33,6 @@ class Project(object):
         self.totExtra=totalData[2]
 
 
-        self.inverterTypes=[x[0] for x in inverterData]
-
-        self.invertersTotKWP=[float(x[1].replace(',','.')) for x in inverterData]
-
-        self.invertersTotkw=[float(x[2].replace(',','.')) for x in inverterData]
-        self.invertersExtra=[x[3] for x in inverterData]
-        self.inverterFilePaths=[x[4] for x in inverterData]
-        self.inverterColumnNumbers=[int(x[5]) if x[5]!="" else 1 for x in inverterData]
 
         self.inverters =[]
         inverterID=0
@@ -50,7 +42,7 @@ class Project(object):
             kW=float(inverterdat[2].replace(',','.'))
             extra =inverterdat[3]
             filePath=inverterdat[4]
-            if (x[5]!=""):
+            if (inverterdat[5]!=""):
                 columnNumber=int(inverterdat[5])
             else:
                 columnNumber=1
@@ -66,11 +58,14 @@ class Project(object):
         self.internetProblems=maintanceData[3]
 
         self.GHIdf=GHIdf
+        self.DBID=None
 
         #self.inverterData=[]
 
     def __getitem__(self, item):
         return getattr(self, item)
+
+
 
     def updateInverterData(self,sampleRate):
         i=0
@@ -119,20 +114,7 @@ class Project(object):
         endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
         df = self.GHIdf
         return df[df.columns[2]][beginDate:endDate].mean()
-    '''
-    def getDailyAverageKWhKWp(self,begindateString,enddateString):
-        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
-        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
-        df = self.GHIdf
-        return df[df.columns[3]][beginDate:endDate].mean()
-    '''
-    '''
-    def getMonthlyAverageKWhKWp(self,begindateString,enddateString):
-        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
-        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
-        df = self.GHIdf
-        return df[df.columns[4]][beginDate:endDate].mean()
-    '''
+
     def getExpectedPR(self,begindateString,enddateString):
         beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
         endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
@@ -141,27 +123,9 @@ class Project(object):
 
 
 
-
-'''
-
-def getDatesBetween(date1, date2):
-    datelist=[]
-    for n in range(int ((date2 - date1).days)+1):
-        datelist.append(date1 + timedelta(n))
-    return datelist
+    def setDBID(self,ID):
+        self.DBID=ID
 
 
 
-def getMonthDistributions(date1, date2):
-    dateList = getDatesBetween(date1, date2)
-    monthNumberList=[]
-    for date in dateList:
-        monthNumberList.append(date.month)
-    occurences = [(x,monthNumberList.count(x)) for x in set(monthNumberList)]
-    return occurences
-
-start_dt = '2017-04-01 00:00:00'
-end_dt = '2017-05-30 23:45:00'
-
-'''
 

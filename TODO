@@ -1,7 +1,6 @@
 check sample rate
-make pdf
-make removing inverters dynamic
 possible to change the kw to W
+WeatherCache rewrite, if some days in cache, merge with these.
 
 
 
@@ -9,3 +8,11 @@ possible to change the kw to W
   GHIdf = CE.collectSolarisData(solargisLocation.value,solargisYear.value)
 
 check directories with accents
+
+/Users/christiaan/PycharmProjects/dataMerger/CalculationEngine.py:162: FutureWarning: to_datetime is deprecated. Use self.to_pydatetime()
+  print(collectSolarisData(path+name,2017))
+
+
+check if project is not already in the DB
+
+check for extra files every startup
