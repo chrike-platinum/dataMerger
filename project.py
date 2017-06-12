@@ -46,7 +46,8 @@ class Project(object):
                 columnNumber=int(inverterdat[5])
             else:
                 columnNumber=1
-            inverter = Inverter(type,kWP,kW,extra,filePath,columnNumber,[])
+            sampleRate = inverterdat[6]
+            inverter = Inverter(type,kWP,kW,extra,filePath,columnNumber,[],sampleRate)
             self.inverters.append((inverterID,inverter))
             inverterID+=1
 
@@ -67,7 +68,7 @@ class Project(object):
 
 
 
-    def updateInverterData(self,sampleRate):
+    def updateInverterData(self):
         i=0
         listOfDF=[]
         inverterFilePaths = []
@@ -79,8 +80,9 @@ class Project(object):
             inverterTypes.append(invertertuple[1].type)
 
         for path,col,inverterType in zip(inverterFilePaths,inverterColumnNumbers,inverterTypes):
-                inverterData = DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i),sampleRate)
-                self.getInverter(i).updateInverterData(inverterData)
+                inverter = self.getInverter(i)
+                inverterData = DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i),inverter.sampleRate)
+                inverter.updateInverterData(inverterData)
                 i+=1
 
         #

@@ -48,6 +48,7 @@ import urlparse, urllib
 from printObject import PrintObject
 import dataHandler as DH
 
+
 printObject = PrintObject()
 
 #curdoc=curdoc()
@@ -85,7 +86,6 @@ def createReadableDate(date):
     date = date.date()
     date = datetime.datetime.strptime(str(date), '%Y-%m-%d').strftime('%d/%m/%Y')
     return date
-
 
 
 
@@ -713,15 +713,6 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
         fig2.savefig(tempPlotDir+'plot2.png', bbox_inches='tight')
 
-        #BIO.output_file(filename='p2.html',mode='inline')
-
-        #BIO.show(curdoc(), new='tab', notebook_handle=False, notebook_url='localhost:8888')
-
-        #file = BIO.save(p2)
-        #print(file)
-
-        ###Performance indicators
-
         totalGenerated = totalkWh
 
 
@@ -781,7 +772,10 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         inverterGraphs= [item for sublist in inverterGraphs for item in sublist]
         inverterGraphs = column(inverterGraphs)
 
-        globalLayout = column([buttonBanner,globalkWGraph,GlobalKwhGraph,inverterGraphs])
+        buttonBack = Button(label="Back")
+        buttonBack.on_click(goToHomescreen)
+
+        globalLayout = column([buttonBanner,globalkWGraph,GlobalKwhGraph,inverterGraphs,buttonBack])
 
         globNewLayout.children = []
         globNewLayout.children =[globalLayout]
@@ -871,14 +865,16 @@ def collectData(saveData=False):
 
 
 
-    project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf,str(sampleRate.value))
+    project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf)
     if (saveData==True):
         print('Saving project to database...')
         DH.saveProject(project)
     else:
         inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
-        kWhPerDay = CE.getkWhPerDay(inputData,str(sampleRate.value))
-        totalkWh = CE.getTotalkWh(inputData,str(sampleRate.value))
+        kWhPerDay = CE.getkWhPerDay(inputData,[x[6] for x in InverterData])
+        totalkWh = CE.getTotalkWh(inputData,[x[6] for x in InverterData])
+
+
         cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
         rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
         showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
@@ -899,12 +895,15 @@ def insertInverterLayout():
     inverterXTotKW = TextInput(value="20", title="Inverter "+str(inverterID)+" installed cap [kW]:")
     #inverter1Avg = TextInput(value="4.87", title="Inverter x exp. daily avg. [kWh/KWP]:")
     inverterXExtra = TextInput(value="", title="Inverter "+str(inverterID)+" EXTRA:")
+    inverterXSampleRate = TextInput(value="15Min", title="Sample rate (e.g.'15Min','1H'):")
+
 
     filePickX = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter "+str(inverterID)+" data:")
     fileColumnX = TextInput(value="1", title="Inverter "+str(inverterID)+" column nr in file:")
 
-    inverterXRow1= [inverterXType,filePickX,fileColumnX]
+    inverterXRow1= [inverterXType,filePickX,fileColumnX,inverterXSampleRate]
     inverterXRow2= [inverterXTotKWP,inverterXTotKW,inverterXExtra]
+
 
     divX = [Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)]
@@ -923,7 +922,7 @@ def insertInverterLayout():
 
     print('counter',inverterClickCounter)
 
-    inverterLabels.append([inverterXType,inverterXTotKWP,inverterXTotKW,inverterXExtra,filePickX,fileColumnX])
+    inverterLabels.append([inverterXType,inverterXTotKWP,inverterXTotKW,inverterXExtra,filePickX,fileColumnX,inverterXSampleRate])
 
 def removeInverterLayout():
     global inverterClickCounter
@@ -954,7 +953,7 @@ def createNewProjectScreen(quickReport=False):
     global globNewLayout
     global newLayout
     global projectNameTxt,reportNumberTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
-    global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,sampleRate
+    global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,inverter1SampleRate
     global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2
     global cleaningDate,extraComments,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation
     div0 = Div(text="""<hr noshade size=4 color=green>""",
@@ -1006,7 +1005,6 @@ def createNewProjectScreen(quickReport=False):
 
     total = TextInput(value="46", title="Total installed cap [kWP]:")
     totalkw = TextInput(value="45", title="Total installed cap [kW]:")
-    sampleRate = TextInput(value="15Min", title="Sample rate (e.g.'15Min','1H'):")
     totExtra = TextInput(value="", title="Total Extra:")
 
 
@@ -1021,12 +1019,13 @@ def createNewProjectScreen(quickReport=False):
     inverter1Totkw = TextInput(value="25", title="Inverter 1 installed cap [kW]:")
     #inverter1Avg = TextInput(value="4.87", title="Inverter 1 exp. daily avg. [kWh/KWP]:")
     inverter1Extra = TextInput(value="", title="Inverter 1 EXTRA:")
+    inverter1SampleRate = TextInput(value="15Min", title="Sample rate (e.g.'15Min','1H'):")
 
     filePick1 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter 1 data:")
     fileColumn1 = TextInput(value="2", title="Inverter 1 column nr in file:")
 
 
-    inverterLabels.append([inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1])
+    inverterLabels.append([inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1,inverter1SampleRate])
 
     div3 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
 
@@ -1052,6 +1051,8 @@ def createNewProjectScreen(quickReport=False):
     buttonRemoveInverter = Button(label="Remove inverter")
     buttonRemoveInverter.on_click(partial(removeInverterLayout,))
 
+    #statusBanner
+
     nextButton = None
     if quickReport:
         nextButton=Button(label='Next')
@@ -1060,7 +1061,7 @@ def createNewProjectScreen(quickReport=False):
         nextButton = Button(label='Add project')
         nextButton.on_click(partial(collectData,saveData=True))
     newLayout = [[headingTxt],[headingDiv],[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],
-                 [div],[total,totalkw,sampleRate,totExtra],[div2],[inverter1Type,filePick1,fileColumn1],[inverter1Tot,inverter1Totkw,inverter1Extra],
+                 [div],[total,totalkw,totExtra],[div2],[inverter1Type,filePick1,fileColumn1,inverter1SampleRate],[inverter1Tot,inverter1Totkw,inverter1Extra],
                  [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation],[buttonBack,nextButton]]
 
 
@@ -1068,6 +1069,70 @@ def createNewProjectScreen(quickReport=False):
     globNewLayout.children=[layout(newLayout)]
 
 
+def collectInpectionData(project,projectDateBeginString,projectDateEndString):
+    projectDateBeginString=str(projectDateBeginString)
+    projectDateBeginString = datetime.datetime.strptime(projectDateBeginString, '%d-%m-%Y %H:%M:%S')
+    projectDateBeginString = projectDateBeginString.strftime("%Y-%m-%d %H:%M:%S")
+
+    projectDateEndString =projectDateEndString
+    projectDateEndString = datetime.datetime.strptime(projectDateEndString, '%d-%m-%Y %H:%M:%S')
+    projectDateEndString = projectDateEndString.strftime("%Y-%m-%d %H:%M:%S")
+
+
+    inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
+    sampleRates=[]
+    for inverterTuple in project.inverters:
+        sampleRates.append(inverterTuple[1].sampleRate)
+
+
+    kWhPerDay = CE.getkWhPerDay(inputData,sampleRates)
+    totalkWh = CE.getTotalkWh(inputData,sampleRates)
+
+    cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
+    rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
+    showProjectScreen("Not assigned",project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
+
+
+
+
+
+
+def showPreInspection(ID):
+    project = DH.getProject(int(ID[2:]))
+    global globNewLayout
+
+    headingTxt = Div(text="""<p style="font-size:20px;text-align: center"> """+str(project.name),
+            width=1000, height=30)
+
+    div = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=20)
+
+    title1Txt = Div(text="""<p style="font-size:16px;text-align: left"><u> Inspection period:</u>""",
+            width=180, height=10)
+    projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date:")
+    projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date:")
+
+    inspectButton = Button(label="Inspect")
+    inspectButton.on_click(partial(collectInpectionData,project,projectDateBegin.value,projectDateEnd.value))
+
+    sepdiv = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=20)
+
+    buttonBack = Button(label="Back")
+    buttonBack.on_click(goToHomescreen)
+
+    lay = layout([[headingTxt],[div],[title1Txt],[projectDateBegin,projectDateEnd,inspectButton],[sepdiv],[buttonBack]])
+
+    globNewLayout.children = []
+    globNewLayout.children =[lay]
+
+
+
+
+
+
+def inspectProject(attr, old, new):
+    showPreInspection(new)
 
 
 def saveSettings(middleLayout):
@@ -1084,7 +1149,6 @@ def resetSettings():
 
 
 def showSettingsScreen():
-    global globNewLayout
     headingTxt = Div(text="""<p style="font-size:20px;text-align: center"> Settings """,
             width=1000, height=30)
     div = Div(text="""<hr noshade size=4 color=green>""",
@@ -1111,43 +1175,6 @@ def showSettingsScreen():
 
     globNewLayout.children = []
     globNewLayout.children =[lay]
-
-
-def showPreInspection(ID):
-    project = DH.getProject(int(ID[2:]))
-    global globNewLayout
-
-    headingTxt = Div(text="""<p style="font-size:20px;text-align: center"> """+str(project.name),
-            width=1000, height=30)
-
-    div = Div(text="""<hr noshade size=4 color=green>""",
-        width=1000, height=20)
-
-    title1Txt = Div(text="""<p style="font-size:16px;text-align: left"><u> Inspection period:</u>""",
-            width=180, height=10)
-    projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date:")
-    projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date:")
-
-    inspectButton = Button(label="Inspect")
-
-    sepdiv = Div(text="""<hr noshade size=4 color=green>""",
-        width=1000, height=20)
-
-    buttonBack = Button(label="Back")
-    buttonBack.on_click(goToHomescreen)
-
-    lay = layout([[headingTxt],[div],[title1Txt],[projectDateBegin,projectDateEnd,inspectButton],[sepdiv],[buttonBack]])
-
-    globNewLayout.children = []
-    globNewLayout.children =[lay]
-
-
-
-
-
-
-def inspectProject(attr, old, new):
-    showPreInspection(new)
 
 
 def homescreen(firstTime):
@@ -1184,7 +1211,6 @@ def homescreen(firstTime):
 
     inspectdropdown.on_change('value', partial(inspectProject))
     #inspectdropdown.on_click(function_to_call)
-
 
 
     #url = path2url('Users/christiaan/PycharmProjects/dataMerger/static/SolcorBanner2.png')

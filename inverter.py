@@ -9,15 +9,16 @@ class Inverter(object):
 
 
 
-    def __init__(self, type,kWP,kw,extra,filePath,columnNumber,inverterData):
+    def __init__(self, type,kWP,kw,extra,filePath,columnNumber,inverterData,sampleRate):
         self.type = type
         self.kWP=kWP
         self.kW=kw
         self.extra=extra
-
+        self.sampleRate = sampleRate
         self.filePath = filePath
         self.columnNumber = columnNumber
         self.inverterData=inverterData
+
 
 
 

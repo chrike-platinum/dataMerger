@@ -19,13 +19,15 @@ def convertToHours(sampleRate):
     if "W" in sampleRate:
         return float(sampleRate.split('W', 1)[0])*168
 
-def calculateTotalAreaVector(DF,sampleRate):
+def calculateTotalAreaVector(DF,sampleRates):
     #Numerical Interation (using simpson's rule)
     list=[]
+    i=0
     for column in DF:
         values = DF[column]
-        dx=convertToHours(sampleRate)
+        dx=convertToHours(sampleRates[i])
         list.append(simps(values, dx=dx))
+        i+=1
     return list
 
 
@@ -58,26 +60,26 @@ def returnAverageRainData(beginDate,endDat,lat,lng):
 
 
 
-def getkWhPerDay(dataList,sampleRate):
+def getkWhPerDay(dataList,sampleRates):
     dataList[1].index = pd.to_datetime(dataList[1].index)
     DFList = [group[1] for group in dataList[1].groupby(dataList[1].index.date)]
     resultList = []
     dates=[]
+    print('DFList----',DFList)
+    print('sampleRates',sampleRates)
     for dat in DFList:
             dates.append(dat.index.values[0])
             dat.index = [pd.Timestamp(d) for d in dat.index]
             #freq = pd.infer_freq(dat.index)
-            freq=sampleRate
-            kWh = calculateTotalAreaVector(dat,freq)
+            kWh = calculateTotalAreaVector(dat,sampleRates)
             resultList.append(kWh)
-
     result = resultList#[list(i) for i in zip(*resultList)]
 
     df = pd.DataFrame(result,index=dates,columns=DFList[0].columns)
     return df
 
-def getTotalkWh(dataList,sampleRate):
-    df = getkWhPerDay(dataList,sampleRate)
+def getTotalkWh(dataList,sampleRates):
+    df = getkWhPerDay(dataList,sampleRates)
     sum = df.sum(axis=1)
     totalsum = sum.sum()
     return totalsum
