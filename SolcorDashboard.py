@@ -47,6 +47,7 @@ import pdfMaker as PM
 import urlparse, urllib
 from printObject import PrintObject
 import dataHandler as DH
+from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
 
 
 printObject = PrintObject()
@@ -810,75 +811,85 @@ def conversion(old):
 
 
 
-def collectData(saveData=False):
+def collectData(statusBanner,saveData=False):
 
-    checklist = ["N", "n", "W","w","E","e","S","s","O",'o','Z','z']
-    if (len([e for e in checklist if e in projectLatitude.value]) >=1):
-        projectLatitudeCon = conversion(projectLatitude.value.decode('utf-8'))
+    projectsInDB = DH.getListOfProjectNames()
+    if ((not (projectNameTxt.value.lower() in projectsInDB) and saveData==True) or saveData==False):
+
+        checklist = ["N", "n", "W","w","E","e","S","s","O",'o','Z','z']
+        if (len([e for e in checklist if e in projectLatitude.value]) >=1):
+            projectLatitudeCon = conversion(projectLatitude.value.decode('utf-8'))
+        else:
+            projectLatitudeCon = projectLatitude.value
+        if (len([a for a in checklist if a in projectLongitude.value]) >=1):
+            projectLongitudeCon = conversion(projectLongitude.value.decode('utf-8'))
+        else:
+            projectLongitudeCon = projectLongitude.value
+
+        generalData = [str(x.value) for x in [projectNameTxt,projectOrientation,projectInclination,structureDD]]
+        geoData = [projectLatitudeCon,projectLongitudeCon,str(projectLatitude.value),str(projectLongitude.value)]
+        adresData = [str(x.value) for x in [projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt]]
+        totalData = [str(x.value) for x in [total,totalkw,totExtra]]
+        #inverter1Data =[str(x.value) for x in [inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1] ]
+        #inverter2Data = [str(x.value) for x in [inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2,fileColumn2]]
+
+
+        InverterData=[]
+        for inverter in inverterLabels:
+            InverterData.append([str(x.value) for x in inverter])
+
+
+        #InverterData = [inverter1Data,inverter2Data]
+        cleaningData = cleaningDate.value.split(',')
+        cleaningData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in cleaningData if str(pd.to_datetime(x)) != 'NaT']
+
+        gridProbData = gridProbDate.value.split(',')
+        gridProbData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in gridProbData if str(pd.to_datetime(x)) != 'NaT']
+
+        maintanceData = maintenanceDate.value.split(',')
+        maintanceData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in maintanceData if str(pd.to_datetime(x)) != 'NaT']
+
+        internetProbData = internetProblemDate.value.split(',')
+        internetProbData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in internetProbData if str(pd.to_datetime(x)) != 'NaT']
+
+
+        maintancelist=[cleaningData,gridProbData,maintanceData,internetProbData]
+
+        projectDateBeginString=str(projectDateBegin.value)
+        projectDateBeginString = datetime.datetime.strptime(projectDateBeginString, '%d-%m-%Y %H:%M:%S')
+        projectDateBeginString = projectDateBeginString.strftime("%Y-%m-%d %H:%M:%S")
+
+        projectDateEndString =str(projectDateEnd.value)
+        projectDateEndString = datetime.datetime.strptime(projectDateEndString, '%d-%m-%Y %H:%M:%S')
+        projectDateEndString = projectDateEndString.strftime("%Y-%m-%d %H:%M:%S")
+
+        extraCommentsDateString = str(extraCommentsDate.value)
+        extraCommentsDateString = datetime.datetime.strptime(extraCommentsDateString, '%d-%m-%Y')
+        extraCommentsDateString = extraCommentsDateString.strftime("%d-%m-%Y")
+
+
+        ExtraData = (extraCommentsDateString,str(extraCommentX.value))
+        reportNumber = str(reportNumberTxt.value)
+        GHIdf = CE.collectSolarisData(solargisLocation.value,str(projectDateBegin.value)[6:10])
+
+
+
+        project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist,ExtraData,adresData,solargisLocation.value,GHIdf)
+        if (saveData==True):
+            print('Saving project to database...')
+            DH.saveProject(project)
+            statusBanner.text="Project saved!"
+        else:
+            inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
+            kWhPerDay = CE.getkWhPerDay(inputData,[x[6] for x in InverterData])
+            totalkWh = CE.getTotalkWh(inputData,[x[6] for x in InverterData])
+
+
+            cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
+            rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
+            showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
     else:
-        projectLatitudeCon = projectLatitude.value
-    if (len([a for a in checklist if a in projectLongitude.value]) >=1):
-        projectLongitudeCon = conversion(projectLongitude.value.decode('utf-8'))
-    else:
-        projectLongitudeCon = projectLongitude.value
-
-    generalData = [str(x.value) for x in [projectNameTxt,projectOrientation,projectInclination,structureDD]]
-    geoData = [projectLatitudeCon,projectLongitudeCon,str(projectLatitude.value),str(projectLongitude.value)]
-    adresData = [str(x.value) for x in [projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt]]
-    totalData = [str(x.value) for x in [total,totalkw,totExtra]]
-    #inverter1Data =[str(x.value) for x in [inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1] ]
-    #inverter2Data = [str(x.value) for x in [inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2,fileColumn2]]
-
-
-    InverterData=[]
-    for inverter in inverterLabels:
-        InverterData.append([str(x.value) for x in inverter])
-
-
-    #InverterData = [inverter1Data,inverter2Data]
-    cleaningData = cleaningDate.value.split(',')
-    cleaningData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in cleaningData if str(pd.to_datetime(x)) != 'NaT']
-
-    gridProbData = gridProbDate.value.split(',')
-    gridProbData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in gridProbData if str(pd.to_datetime(x)) != 'NaT']
-
-    maintanceData = maintenanceDate.value.split(',')
-    maintanceData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in maintanceData if str(pd.to_datetime(x)) != 'NaT']
-
-    internetProbData = internetProblemDate.value.split(',')
-    internetProbData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in internetProbData if str(pd.to_datetime(x)) != 'NaT']
-
-
-    maintancelist=[cleaningData,gridProbData,maintanceData,internetProbData]
-
-    projectDateBeginString=str(projectDateBegin.value)
-    projectDateBeginString = datetime.datetime.strptime(projectDateBeginString, '%d-%m-%Y %H:%M:%S')
-    projectDateBeginString = projectDateBeginString.strftime("%Y-%m-%d %H:%M:%S")
-
-    projectDateEndString =str(projectDateEnd.value)
-    projectDateEndString = datetime.datetime.strptime(projectDateEndString, '%d-%m-%Y %H:%M:%S')
-    projectDateEndString = projectDateEndString.strftime("%Y-%m-%d %H:%M:%S")
-
-    ExtraData = str(extraComments.value)
-    reportNumber = str(reportNumberTxt.value)
-    GHIdf = CE.collectSolarisData(solargisLocation.value,str(projectDateBegin.value)[6:10])
-
-
-
-    project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist ,ExtraData,adresData,GHIdf)
-    if (saveData==True):
-        print('Saving project to database...')
-        DH.saveProject(project)
-    else:
-        inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
-        kWhPerDay = CE.getkWhPerDay(inputData,[x[6] for x in InverterData])
-        totalkWh = CE.getTotalkWh(inputData,[x[6] for x in InverterData])
-
-
-        cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-        rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-        showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
-
+        statusBanner.text="Error: Project name already in Database!"
 
 
 def insertInverterLayout():
@@ -955,7 +966,7 @@ def createNewProjectScreen(quickReport=False):
     global projectNameTxt,reportNumberTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
     global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,inverter1SampleRate
     global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2
-    global cleaningDate,extraComments,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation
+    global cleaningDate,extraCommentX,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation,extraCommentsDate
     div0 = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
     global fileColumn1,fileColumn2
@@ -1036,7 +1047,8 @@ def createNewProjectScreen(quickReport=False):
     internetProblemDate = TextInput(value="", title="Internet problem date(s):")
 
 
-    extraComments = TextInput(value="Here is a comment...", title="Comments:")
+    extraCommentX = TextInput(value="Here is a comment...", title="Comment:")
+    extraCommentsDate=TextInput(value="10-04-2017", title="Date comment:")
     solargisLocation = TextInput(value='/Users/christiaan/Desktop/Solcor/dataMergeWeek/NDC_PV-8627-1705-1780_-31.783--70.984.xls', title="Solargis file location:")
 
 
@@ -1051,25 +1063,26 @@ def createNewProjectScreen(quickReport=False):
     buttonRemoveInverter = Button(label="Remove inverter")
     buttonRemoveInverter.on_click(partial(removeInverterLayout,))
 
-    #statusBanner
+    statusBanner=Div(text="""<p style="font-size:14px ;text-align: center">""",
+    width=600, height=100)
 
     nextButton = None
     if quickReport:
         nextButton=Button(label='Next')
-        nextButton.on_click(collectData)
+        nextButton.on_click(partial(collectData,statusBanner))
     else:
         nextButton = Button(label='Add project')
-        nextButton.on_click(partial(collectData,saveData=True))
+        nextButton.on_click(partial(collectData,statusBanner,saveData=True))
     newLayout = [[headingTxt],[headingDiv],[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],
                  [div],[total,totalkw,totExtra],[div2],[inverter1Type,filePick1,fileColumn1,inverter1SampleRate],[inverter1Tot,inverter1Totkw,inverter1Extra],
-                 [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraComments,solargisLocation],[buttonBack,nextButton]]
+                 [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraCommentX,extraCommentsDate,solargisLocation],[buttonBack,nextButton,statusBanner]]
 
 
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
 
 
-def collectInpectionData(project,projectDateBeginString,projectDateEndString):
+def collectInspectionData(project,projectDateBeginString,projectDateEndString):
     projectDateBeginString=str(projectDateBeginString)
     projectDateBeginString = datetime.datetime.strptime(projectDateBeginString, '%d-%m-%Y %H:%M:%S')
     projectDateBeginString = projectDateBeginString.strftime("%Y-%m-%d %H:%M:%S")
@@ -1092,8 +1105,272 @@ def collectInpectionData(project,projectDateBeginString,projectDateEndString):
     rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
     showProjectScreen("Not assigned",project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
 
+def saveSelection(attr, old, new):
+    global selection
+    selection = new['1d']['indices']
+def removeMaintenance(project,data_table):
+    global selection
+    dateToRemove = data_table.source.data['dates'][selection[0]]
+    kindToRemove = data_table.source.data['maintenance'][selection[0]]
 
 
+    if (kindToRemove == 'cleaning'):
+        project.cleaningDates.remove(dateToRemove)
+        print('done something to cleaning data')
+    if kindToRemove == 'Grid problems':
+        project.gridProblemData.remove(dateToRemove)
+    if kindToRemove == 'Maintenance':
+        project.maintenanceData.remove(dateToRemove)
+    if kindToRemove == 'Internet problems':
+        project.internetProblems.remove(dateToRemove)
+    DH.saveProject(project)
+    time.sleep(1)
+    showManagementScreen('ID'+str(project.DBID))
+def collectNewMaintanceData(project):
+    cleaningData = cleaningDateX.value.split(',')
+    cleaningData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in cleaningData if str(pd.to_datetime(x)) != 'NaT']
+
+    gridProbData = gridProbDateX.value.split(',')
+    gridProbData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in gridProbData if str(pd.to_datetime(x)) != 'NaT']
+
+    maintanceData = maintenanceDateX.value.split(',')
+    maintanceData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in maintanceData if str(pd.to_datetime(x)) != 'NaT']
+
+    internetProbData = internetProblemDateX.value.split(',')
+    internetProbData = [datetime.datetime.strptime(x, '%d-%m-%Y') for x in internetProbData if str(pd.to_datetime(x)) != 'NaT']
+
+    for cleanNew in cleaningData:
+        project.cleaningDates.append(cleanNew)
+    for gridNew in gridProbData:
+        project.gridProblemData.append(gridNew)
+    for mainNew in maintanceData:
+        project.maintenanceData.append(mainNew)
+    for internetNew in internetProbData:
+        project.internetProblems.append(internetNew)
+    DH.saveProject(project)
+    time.sleep(1)
+    showManagementScreen('ID'+str(project.DBID))
+
+
+def commentSelection(attr, old, new):
+    global commentSelectionInt
+    print(new['1d']['indices'])
+    commentSelectionInt = new['1d']['indices']
+def removeComment(project,data_table):
+    global commentSelectionInt
+    dateToRemove = data_table.source.data['dates'][commentSelectionInt[0]]
+    commentToRemove = data_table.source.data['comment'][commentSelectionInt[0]]
+    dateToRemove = dateToRemove.strftime("%d-%m-%Y")
+    project.commentList.remove((dateToRemove,str(commentToRemove)))
+    DH.saveProject(project)
+    time.sleep(1)
+    showManagementScreen('ID'+str(project.DBID))
+
+def addComment(project):
+    comment = extraCommentX.value
+    date = extraCommentDateX.value
+    project.commentList.append((date,comment))
+    DH.saveProject(project)
+    time.sleep(1)
+    showManagementScreen('ID'+str(project.DBID))
+
+
+
+
+def showManagementScreen(ID):
+    project = DH.getProject(int(ID[2:]))
+
+    headingTxt = Div(text="""<p style="font-size:28px;text-align: center"> """+str(project.name),
+            width=1100, height=30)
+
+    headingdiv = Div(text="""<hr noshade size=4 color=green>""",
+        width=1100, height=10)
+
+
+
+    global globNewLayout,cleaningDateX,gridProbDateX,maintenanceDateX,internetProblemDateX,extraCommentX,extraCommentDateX
+
+    projectNameTxt = TextInput(value=project.name, title="Project name:")
+
+
+    projectContactTxt = TextInput(value=project.contactPerson, title="Contact person:")
+    projectStreetTxt = TextInput(value=project.street, title="Street + nr:")
+    projectCityTxt = TextInput(value=project.city, title="City (+ Country):")
+    projectTelephoneTxt = TextInput(value=project.telephoneNumber, title="Telephone:")
+
+    div0 = Div(text="""<hr noshade size=4 color=green>""",
+        width=1100, height=30)
+
+    projectOrientation =TextInput(value=str(project.projectOrientation), title="Project orientation:")
+    projectInclination = TextInput(value=str(project.projectInclination), title="Project inclination:")
+    projectLatitude = TextInput(value=str(project.projectLatitude), title="Project latitude:")
+    projectLongitude = TextInput(value=str(project.projectLongitude), title="Project longitude:")
+
+
+    structureDD = Select(title='Structure', value=str(project.structureType), options=["Parallel to roof","Structure with inclination"])
+
+
+    div = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+
+
+    total = TextInput(value=str(project.totalkWP), title="Total installed cap [kWP]:")
+    totalkw = TextInput(value=str(project.totalkw), title="Total installed cap [kW]:")
+    totExtra = TextInput(value=str(project.totExtra), title="Total Extra:")
+
+
+    div2 = Div(text="""<hr noshade size=4 color=green>""",
+        width=1100, height=30)
+
+    inverterLabels=[]
+    for inveterTuple in project.inverters:
+        inverterID = str(inveterTuple[0]+1)
+        inverter = inveterTuple[1]
+
+        inverter1Type = TextInput(value=inverter.type, title="Inverter "+inverterID+" type:")
+        inverter1Tot = TextInput(value=str(inverter.kWP), title="Inverter "+inverterID+" installed cap [kWP]:")
+        inverter1Totkw = TextInput(value=str(inverter.kW), title="Inverter "+inverterID+" installed cap [kW]:")
+        inverter1Extra = TextInput(value=str(inverter.extra), title="Inverter "+inverterID+" EXTRA:")
+        inverter1SampleRate = TextInput(value=str(inverter.sampleRate), title="Sample rate (e.g.'15Min','1H'):")
+
+        filePick1 = TextInput(value=str(inverter.filePath), title="Inverter "+inverterID+" data:")
+        fileColumn1 = TextInput(value=str(inverter.columnNumber), title="Inverter "+inverterID+" column nr in file:")
+        div4 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+        inverterLabels.append([inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1,inverter1SampleRate,div4])
+
+
+
+    div3 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+    div4 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=10)
+
+
+    MaintenanceTitle = Div(text="""<p style="font-size:24px;text-align: left"> Maintenance""",
+            width=1000, height=30)
+
+    cleaningDateX = TextInput(value="", title="Cleaning date(s):")
+    gridProbDateX = TextInput(value="", title="Grid problem date(s):")
+    maintenanceDateX = TextInput(value="", title="Maintenance date(s):")
+    internetProblemDateX = TextInput(value="", title="Internet problem date(s):")
+
+
+    extraComments = TextInput(value=str(project.commentList), title="Comments:")
+    solargisLocation = TextInput(value=project.solargisFileLocation, title="Solargis file location:")
+
+
+    buttonBack = Button(label="Back")
+    buttonBack.on_click(goToHomescreen)
+
+    statusBanner=Div(text="""<p style="font-size:14px ;text-align: center">""",
+    width=1100, height=100)
+
+    div7 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+    div8 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=10)
+    inverterTitle = Div(text="""<p style="font-size:24px;text-align: left"> Inverter(s)""",
+            width=1000, height=30)
+
+    newLayout = [[headingTxt],[headingdiv],[projectNameTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination],
+                 [div],[total,totalkw,totExtra],[div2],[solargisLocation],[div7],[],[],[],[inverterTitle],[div8]]
+
+
+
+    for inverterInfo in inverterLabels:
+        newLayout.append(inverterInfo)
+
+    data = dict(
+        dates=[],
+        maintenance=[],
+    )
+    for cleanindate in project.cleaningDates:
+        data['dates'].append(cleanindate)
+        data['maintenance'].append('cleaning')
+    for gridProb in project.gridProblemData:
+        data['dates'].append(gridProb)
+        data['maintenance'].append('Grid problems')
+    for maint in project.maintenanceData:
+        data['dates'].append(maint)
+        data['maintenance'].append('Maintenance')
+    for intProb in project.internetProblems:
+        data['dates'].append(intProb)
+        data['maintenance'].append('Internet problems')
+    source = ColumnDataSource(data)
+
+    columns = [
+        TableColumn(field="dates", title="Date", formatter=DateFormatter(format='d M yy')),
+        TableColumn(field="maintenance", title="Maintenance"),
+    ]
+    data_table = DataTable(source=source, columns=columns, width=400, height=200)
+    source.on_change('selected', saveSelection)
+
+    buttonMaintenanceMgmt = Button(label="Remove instance")
+    buttonMaintenanceMgmt.on_click(partial(removeMaintenance, project,data_table))
+    butttonAddMaintanceDate = Button(label="Add instance")
+    butttonAddMaintanceDate.on_click(partial(collectNewMaintanceData,project))
+    div5 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+
+    for info in [[],[],[],[MaintenanceTitle],[div4],[data_table,cleaningDateX,gridProbDateX,maintenanceDateX,internetProblemDateX,buttonMaintenanceMgmt,butttonAddMaintanceDate],[div5]]:
+        newLayout.append(info)
+
+
+    dataNew = dict(
+        dates=[],
+        comment=[],
+    )
+    for comment in project.commentList:
+        dataNew['dates'].append(datetime.datetime.strptime(str(comment[0]), '%d-%m-%Y'))
+        dataNew['comment'].append(comment[1])
+    source2 = ColumnDataSource(dataNew)
+
+    columns = [
+        TableColumn(field="dates", title="Date", formatter=DateFormatter(format='d M yy'),width=200),
+        TableColumn(field="comment", title="Comments",width=1000),
+    ]
+    data_table2 = DataTable(source=source2, columns=columns, width= 1000, height=200)
+    source2.on_change('selected', commentSelection)
+
+    extraCommentX = TextInput(value="", title="Comment:")
+    extraCommentDateX = TextInput(value="10-04-2017", title="Date comment:")
+    removeCommentButton = Button(label="Remove Comment")
+    removeCommentButton.on_click(partial(removeComment,project,data_table2))
+    addCommentButton = Button(label="Add Comment")
+    addCommentButton.on_click(partial(addComment,project))
+
+    commentTitle = Div(text="""<p style="font-size:24px;text-align: left"> Comments""",
+            width=1000, height=30)
+    div9 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+
+
+    dataTitle = Div(text="""<p style="font-size:24px;text-align: left"> Data""",
+            width=1000, height=30)
+    div10 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+
+    for info in [[],[],[],[commentTitle],[div9],[data_table2],[extraCommentDateX,extraCommentX,removeCommentButton,addCommentButton],[div3],[],[],[],[dataTitle],[div10]]:
+        newLayout.append(info)
+
+
+    ###DATA information:
+    df = project.getAllInverterData()
+    df['Date'] = pd.to_datetime(df.index).strftime('%d/%m/%Y %H:%M:%S')
+    DFdata = dict(df)
+    DFsource = ColumnDataSource(DFdata)
+    DFcolumns=[]
+    headers= list(df)
+    popped = headers.pop()
+    headers.insert(0,popped)
+
+    print(headers)
+    for columnName in headers:
+        print(columnName)
+        DFcolumns.append(TableColumn(field=columnName, title=columnName),)
+
+
+    DFdata_table = DataTable(source=DFsource, columns=DFcolumns, width=400, height=600)
+
+
+
+
+    for info in [[DFdata_table],[buttonBack]]:
+        newLayout.append(info)
+    globNewLayout.children = []
+    globNewLayout.children=[layout(newLayout)]
 
 
 
@@ -1113,7 +1390,7 @@ def showPreInspection(ID):
     projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date:")
 
     inspectButton = Button(label="Inspect")
-    inspectButton.on_click(partial(collectInpectionData,project,projectDateBegin.value,projectDateEnd.value))
+    inspectButton.on_click(partial(collectInspectionData,project,projectDateBegin.value,projectDateEnd.value))
 
     sepdiv = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=20)
@@ -1129,7 +1406,8 @@ def showPreInspection(ID):
 
 
 
-
+def manageProject(attr, old, new):
+    showManagementScreen(new)
 
 def inspectProject(attr, old, new):
     showPreInspection(new)
@@ -1197,8 +1475,12 @@ def homescreen(firstTime):
     menu = [(str(project.name),"ID"+str(project.DBID)) for project in DH.getAllSavedProjects()]
 
     manageDropDown = Dropdown(label="Manage projects", button_type="warning", menu=menu)
+    manageDropDown.on_change('value',partial(manageProject))
+
 
     inspectdropdown = Dropdown(label="Inspect Projects", button_type="warning", menu=menu)
+    inspectdropdown.on_change('value', partial(inspectProject))
+
 
     buttonShowDashboard = Button(label="Dashboard")
 
@@ -1209,7 +1491,7 @@ def homescreen(firstTime):
     buttonSettings.on_click(showSettingsScreen)
 
 
-    inspectdropdown.on_change('value', partial(inspectProject))
+
     #inspectdropdown.on_click(function_to_call)
 
 

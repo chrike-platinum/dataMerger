@@ -13,6 +13,11 @@ check directories with accents
   print(collectSolarisData(path+name,2017))
 
 
-check if project is not already in the DB
 
 check for extra files every startup
+
+check input values
+
+reset database
+
+delete project

@@ -107,9 +107,3 @@ def getAllProjectObjects():
         projectsList.append(loadProject(projectTuple[0]))
     return projectsList
 
-if __name__ == "__main__":
-    resetDB()
-    #print(getAllProjectObjects())
-    #project = Project(['2']*4,['geoData']*4,['2']*3,[['1','1']*6],[[[],[]],[[],[]],[[],[]],[[],[]]],[],['adres']*4,[])
-    #project2 = loadProject(1)
-    #saveProject(project2)

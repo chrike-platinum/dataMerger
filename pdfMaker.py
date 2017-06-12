@@ -554,7 +554,10 @@ def testPDF2(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechRe
 
         i=0
         inverterID=0
-        for a in project.inverterTypes[0:2]:
+
+
+        for a in project.inverters[0:2]:
+            inverter = a[1]
             ptext='<font color=rgb(73,75,88) size="16"><u>Inverter '+str(inverterID+1)+'</U></font>'
             createParagraph(c,doc, ptext, 90, 110+i, styleSmallHeading)
 
@@ -562,7 +565,6 @@ def testPDF2(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechRe
             leftTitle='Performance indicators:'
 
 
-            inverter = project.getInverter(inverterID)
             PR = printObject.invertersPR[inverterID]
             totalGenerated = printObject.invertersTotalGenerated[inverterID]
             realDailyAvg = printObject.invertersRealDailyAvgKWP[inverterID]
@@ -585,11 +587,11 @@ def testPDF2(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechRe
         c.drawString(15, 15, 'Solcor.org')
         c.drawString(570, 15, str(page_num))
 
-        if len(project.inverterTypes[2:len(project.inverterTypes)])!=0:
+        if len(project.inverters[2:len(project.inverters)])!=0:
             c.showPage()
         i=0
         counter = 1
-        for a in project.inverterTypes[2:len(project.inverterTypes)]:
+        for a in project.inverters[2:len(project.inverters)]:
                 if (counter!=0 and counter%4==0):
                     page_num = c.getPageNumber()
                     c.drawString(15, 15, 'Solcor.org')

@@ -10,7 +10,7 @@ class Project(object):
 
 
 
-    def __init__(self, generalData,geoData,totalData,inverterData,maintanceData,ExtraData,adresData,GHIdf):
+    def __init__(self, generalData,geoData,totalData,inverterData,maintanceData,ExtraData,adresData,solargisFileLocation,GHIdf):
         self.name = generalData[0]
         self.projectOrientation=generalData[1]
         self.projectInclination=generalData[2]
@@ -60,7 +60,7 @@ class Project(object):
 
         self.GHIdf=GHIdf
         self.DBID=None
-
+        self.solargisFileLocation=solargisFileLocation
         #self.inverterData=[]
 
     def __getitem__(self, item):
@@ -93,6 +93,13 @@ class Project(object):
             listOfDF.append(invertertuple[1].inverterData)
         df = pd.concat(listOfDF,axis=1,ignore_index=False)
         return df[projectDateBeginString:projectDateEndString]
+
+    def getAllInverterData(self):
+        listOfDF=[]
+        for invertertuple in self.inverters:
+            listOfDF.append(invertertuple[1].inverterData)
+        df = pd.concat(listOfDF,axis=1,ignore_index=False)
+        return df
 
 
     def getInverter(self,inverterID):
@@ -127,6 +134,8 @@ class Project(object):
 
     def setDBID(self,ID):
         self.DBID=ID
+
+
 
 
 
