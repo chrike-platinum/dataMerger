@@ -57,6 +57,13 @@ def updateIDList(ID,projectName):
     with open(script_dir+'/'+databaseFolder+"ProjectIDList.dat", "wb") as f:
         pickle.dump(list,f)
 
+def removeProjectFromIDList(project):
+    list = loadIDList()
+    list.remove((project.DBID,project.name))
+    with open(script_dir+'/'+databaseFolder+"ProjectIDList.dat", "wb") as f:
+        pickle.dump(list,f)
+
+
 
 def getNextProjectID():
     list = loadIDList()
@@ -91,6 +98,15 @@ def saveProject(project):
                 pickle.dump(project, f)
         updateIDList(projectID,project.name)
         print('Project data saved!')
+
+def deleteProject(project):
+    filelist = [ f for f in os.listdir(script_dir+'/'+databaseFolder) if f.endswith(".dat") ]
+    for f in filelist:
+        print('File',f)
+        print('FileName to delete','projectDB'+str(project.DBID)+'.dat')
+        if f == 'projectDB'+str(project.DBID)+'.dat':
+            os.remove(script_dir+"/"+databaseFolder+"/"+f)
+            removeProjectFromIDList(project)
 
 
 def resetDB():

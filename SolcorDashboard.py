@@ -4,6 +4,7 @@ __author__ = 'christiaan'
 local_encoding = 'cp850'
 tempPlotDir = 'tempPlots/'
 plotFileName = 'plot'
+global PDFoutput
 
 
 
@@ -48,6 +49,7 @@ import urlparse, urllib
 from printObject import PrintObject
 import dataHandler as DH
 from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
+from inverter import Inverter
 
 
 printObject = PrintObject()
@@ -931,7 +933,6 @@ def insertInverterLayout():
 
     inverterClickCounter+=1
 
-    print('counter',inverterClickCounter)
 
     inverterLabels.append([inverterXType,inverterXTotKWP,inverterXTotKW,inverterXExtra,filePickX,fileColumnX,inverterXSampleRate])
 
@@ -1175,6 +1176,162 @@ def addComment(project):
     showManagementScreen('ID'+str(project.DBID))
 
 
+def export(project):
+    outputDir = str(outputDirectory.value)
+    format = str(formatSelection.value)
+    fileName=str(outputDir+'/'+str(project.name)+' consumption'+format)
+    df = project.getAllInverterData()
+    df.index.name = 'Timestamp'
+    df.to_csv(fileName, sep=';')
+    if (format == '.xlsx'):
+        writer = pd.ExcelWriter(fileName, engine='xlsxwriter')
+        df.to_excel(writer, sheet_name='Consumption')
+    else:
+         df.to_csv(fileName, sep=';')
+
+
+def exportCond(project):
+    outputDir = str(outputDirectoryCond.value)
+    format = str(formatSelectionCond.value)
+    fileName=str(outputDir+'/'+str(project.name)+' condition'+format)
+    GHIdf=project.GHIdf
+    GHIdf=GHIdf.groupby(pd.TimeGrouper(freq='M')).mean().round(2)
+    GHIdf.index = GHIdf.index.strftime('%m-%Y')
+    if (format == '.xlsx'):
+        writer = pd.ExcelWriter(fileName, engine='xlsxwriter')
+        GHIdf.to_excel(writer, sheet_name='Consumption')
+    else:
+         GHIdf.to_csv(fileName, sep=';')
+
+def updateGeneralData(project):
+        project.name=projectNameTxt.value
+        project.contactPerson=projectContactTxt.value
+        project.street=projectStreetTxt.value
+        project.city=projectCityTxt.value
+        project.telephoneNumber=projectTelephoneTxt.value
+        project.projectOrientation=projectOrientation.value
+        project.projectInclination=projectInclination.value
+        project.projectLatitude=projectLatitude.value
+        project.projectLongitude=projectLongitude.value
+        project.structureType=structureDD.value
+        project.totalkWP =float(total.value.replace(',','.'))
+        project.totalkw = float(totalkw.value.replace(',','.'))
+        project.totExtra = totExtra.value
+        DH.saveProject(project)
+        time.sleep(1)
+        showManagementScreen('ID'+str(project.DBID))
+
+
+
+def updateInverterData(project,inverter,inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,inverter1SampleRate,filePick1,fileColumn1):
+    inverter.type=inverter1Type.value
+    inverter.kWP=float(inverter1Tot.value.replace(',','.'))
+    inverter.kW=float(inverter1Totkw.value.replace(',','.'))
+    inverter.extra =inverter1Extra.value
+    inverter.filePath=filePick1.value
+    if (fileColumn1.value!=""):
+        inverter.columnNumber=int(fileColumn1.value)
+    else:
+        inverter.columnNumber=1
+    inverter.sampleRate= inverter1SampleRate.value
+    DH.saveProject(project)
+    time.sleep(1)
+    showManagementScreen('ID'+str(project.DBID))
+
+
+def deleteInverter(project,inveterID,inverter):
+    project.removeInverter(inveterID,inverter)
+    DH.saveProject(project)
+    time.sleep(1)
+    showManagementScreen('ID'+str(project.DBID))
+
+def cancelNewInverter(project):
+       showManagementScreen('ID'+str(project.DBID))
+
+def saveNewInverter(project,inverterXType,inverterXTotKWP,inverterXTotKW,inverterXExtra,inverterXSampleRate,filePickX,fileColumnX):
+    type=inverterXType.value
+    kWP=float(inverterXTotKWP.value.replace(',','.'))
+    kW=float(inverterXTotKW.value.replace(',','.'))
+    extra =inverterXExtra.value
+    filePath=filePickX.value
+    if (fileColumnX.value!=""):
+        columnNumber=int(fileColumnX.value)
+    else:
+        columnNumber=1
+    sampleRate= inverterXSampleRate.value
+    inverter = Inverter(type,kWP,kW,extra,filePath,columnNumber,[],sampleRate)
+    project.addInverter(inverter)
+    DH.saveProject(project)
+    time.sleep(1)
+    showManagementScreen('ID'+str(project.DBID))
+
+
+
+def addInverterLayout(inverterID,project,year):
+    inverterID=int(inverterID)+1
+    oldLayout=newLayout
+    inverterXType = TextInput(value="20000TL-30", title="Inverter "+str(inverterID)+" type:")
+
+
+    inverterXTotKWP = TextInput(value="20,5", title="Inverter "+str(inverterID)+" installed cap [kWP]:")
+    inverterXTotKW = TextInput(value="20", title="Inverter "+str(inverterID)+" installed cap [kW]:")
+    inverterXExtra = TextInput(value="", title="Inverter "+str(inverterID)+" EXTRA:")
+    inverterXSampleRate = TextInput(value="15Min", title="Sample rate (e.g.'15Min','1H'):")
+
+
+    filePickX = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter "+str(inverterID)+" data:")
+    fileColumnX = TextInput(value="1", title="Inverter "+str(inverterID)+" column nr in file:")
+
+    buttonSave = Button(label='Save new Inverter')
+    buttonSave.on_click(partial(saveNewInverter,project,inverterXType,inverterXTotKWP,inverterXTotKW,inverterXExtra,inverterXSampleRate,filePickX,fileColumnX))
+
+    buttonCancel = Button(label='Cancel')
+    buttonCancel.on_click(partial(cancelNewInverter,project))
+
+    inverterXRow1= [inverterXType,inverterXTotKWP,inverterXTotKW]
+    inverterXRow2= [inverterXExtra,filePickX,fileColumnX,inverterXSampleRate,buttonSave,buttonCancel]
+
+
+    divX = [Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=30)]
+
+    oldLayout.insert(15+3*int(inverterID),inverterXRow1)
+    oldLayout.insert(16+3*int(inverterID),inverterXRow2)
+    oldLayout.insert(17+3*int(inverterID),divX)
+
+    del oldLayout[17+3*int(inverterID)+1]
+
+    updatedLayout = oldLayout[:]
+    globNewLayout.children = []
+    globNewLayout.children=[layout(updatedLayout)]
+
+def changeSolargisLocation(project,solargisLocation,year):
+    year = year.value
+    project.updateSolargisFile(solargisLocation.value,str(year))
+    DH.saveProject(project)
+    time.sleep(1)
+    showManagementScreen('ID'+str(project.DBID))
+
+def deleteProjectAndGoBack(project):
+    DH.deleteProject(project)
+    goToHomescreen()
+
+
+def deleteProjectScreen(project):
+    headingTxt = Div(text="""<p style="font-size:28px;text-align: center"> Delete: """+str(project.name),
+            width=400, height=30)
+
+    headingdiv = Div(text="""<hr noshade size=4 color=green>""",
+        width=400, height=10)
+
+    buttonDeleteProject=Button(label='Delete project',button_type="danger")
+    buttonDeleteProject.on_click(partial(deleteProjectAndGoBack,project))
+    buttonCancelDeletion=Button(label='Cancel')
+    buttonCancelDeletion.on_click(partial(showManagementScreen,'ID'+str(project.DBID)))
+
+    newLayout=[[headingTxt],[headingdiv],[buttonDeleteProject],[buttonCancelDeletion]]
+    globNewLayout.children = []
+    globNewLayout.children=[layout(newLayout)]
 
 
 def showManagementScreen(ID):
@@ -1183,12 +1340,21 @@ def showManagementScreen(ID):
     headingTxt = Div(text="""<p style="font-size:28px;text-align: center"> """+str(project.name),
             width=1100, height=30)
 
+
+    generalTitle = Div(text="""<p style="font-size:24px;text-align: left"> General information""",
+            width=1000, height=10)
+
     headingdiv = Div(text="""<hr noshade size=4 color=green>""",
         width=1100, height=10)
 
 
 
-    global globNewLayout,cleaningDateX,gridProbDateX,maintenanceDateX,internetProblemDateX,extraCommentX,extraCommentDateX
+    global globNewLayout,newLayout,cleaningDateX,gridProbDateX,maintenanceDateX,internetProblemDateX,extraCommentX,\
+        extraCommentDateX,formatSelection,formatSelectionCond,outputDirectory,outputDirectoryCond
+
+    global projectNameTxt,projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,projectOrientation,\
+        projectInclination,projectLatitude,projectLongitude,structureDD,total,totalkw,totExtra
+
 
     projectNameTxt = TextInput(value=project.name, title="Project name:")
 
@@ -1221,9 +1387,15 @@ def showManagementScreen(ID):
     div2 = Div(text="""<hr noshade size=4 color=green>""",
         width=1100, height=30)
 
+
+    buttonUpdateGeneralData = Button(label="Save changes")
+    buttonUpdateGeneralData.on_click(partial(updateGeneralData,project))
+
     inverterLabels=[]
+    lastInverterID=0
     for inveterTuple in project.inverters:
         inverterID = str(inveterTuple[0]+1)
+        lastInverterID = inverterID
         inverter = inveterTuple[1]
 
         inverter1Type = TextInput(value=inverter.type, title="Inverter "+inverterID+" type:")
@@ -1234,9 +1406,19 @@ def showManagementScreen(ID):
 
         filePick1 = TextInput(value=str(inverter.filePath), title="Inverter "+inverterID+" data:")
         fileColumn1 = TextInput(value=str(inverter.columnNumber), title="Inverter "+inverterID+" column nr in file:")
-        div4 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
-        inverterLabels.append([inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1,inverter1SampleRate,div4])
 
+        upDateInveterButton=Button(label='Save changes')
+        upDateInveterButton.on_click(partial(updateInverterData,project,inverter,inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,inverter1SampleRate,filePick1,fileColumn1))
+
+        deleteInverterButton=Button(label='Delete')
+        deleteInverterButton.on_click(partial(deleteInverter,project,int(inverterID)-1,inverter))
+
+        div4 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+        inverterLabels.append([inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1,inverter1SampleRate,upDateInveterButton,deleteInverterButton,div4])
+
+
+    buttonAddInveter = Button(label='Add inverter')
+    buttonAddInveter.on_click(partial(addInverterLayout,lastInverterID,project))
 
 
     div3 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
@@ -1244,7 +1426,7 @@ def showManagementScreen(ID):
 
 
     MaintenanceTitle = Div(text="""<p style="font-size:24px;text-align: left"> Maintenance""",
-            width=1000, height=30)
+            width=1000, height=10)
 
     cleaningDateX = TextInput(value="", title="Cleaning date(s):")
     gridProbDateX = TextInput(value="", title="Grid problem date(s):")
@@ -1253,7 +1435,6 @@ def showManagementScreen(ID):
 
 
     extraComments = TextInput(value=str(project.commentList), title="Comments:")
-    solargisLocation = TextInput(value=project.solargisFileLocation, title="Solargis file location:")
 
 
     buttonBack = Button(label="Back")
@@ -1265,10 +1446,10 @@ def showManagementScreen(ID):
     div7 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
     div8 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=10)
     inverterTitle = Div(text="""<p style="font-size:24px;text-align: left"> Inverter(s)""",
-            width=1000, height=30)
+            width=1000, height=10)
 
-    newLayout = [[headingTxt],[headingdiv],[projectNameTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination],
-                 [div],[total,totalkw,totExtra],[div2],[solargisLocation],[div7],[],[],[],[inverterTitle],[div8]]
+    newLayout = [[headingTxt],[],[],[],[generalTitle],[headingdiv],[projectNameTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination],
+                 [div],[total,totalkw,totExtra],[div2],[buttonUpdateGeneralData],[],[],[],[inverterTitle],[div8]]
 
 
 
@@ -1306,7 +1487,7 @@ def showManagementScreen(ID):
     butttonAddMaintanceDate.on_click(partial(collectNewMaintanceData,project))
     div5 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
 
-    for info in [[],[],[],[MaintenanceTitle],[div4],[data_table,cleaningDateX,gridProbDateX,maintenanceDateX,internetProblemDateX,buttonMaintenanceMgmt,butttonAddMaintanceDate],[div5]]:
+    for info in [[buttonAddInveter],[],[],[],[MaintenanceTitle],[div4],[data_table,cleaningDateX,gridProbDateX,maintenanceDateX,internetProblemDateX,buttonMaintenanceMgmt,butttonAddMaintanceDate],[div5]]:
         newLayout.append(info)
 
 
@@ -1334,19 +1515,19 @@ def showManagementScreen(ID):
     addCommentButton.on_click(partial(addComment,project))
 
     commentTitle = Div(text="""<p style="font-size:24px;text-align: left"> Comments""",
-            width=1000, height=30)
+            width=1000, height=10)
     div9 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
 
 
-    dataTitle = Div(text="""<p style="font-size:24px;text-align: left"> Data""",
-            width=1000, height=30)
+    dataTitle = Div(text="""<p style="font-size:24px;text-align: left"> Production data""",
+            width=1000, height=10)
     div10 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
 
     for info in [[],[],[],[commentTitle],[div9],[data_table2],[extraCommentDateX,extraCommentX,removeCommentButton,addCommentButton],[div3],[],[],[],[dataTitle],[div10]]:
         newLayout.append(info)
 
 
-    ###DATA information:
+    ###production data information:
     df = project.getAllInverterData()
     df['Date'] = pd.to_datetime(df.index).strftime('%d/%m/%Y %H:%M:%S')
     DFdata = dict(df)
@@ -1355,22 +1536,63 @@ def showManagementScreen(ID):
     headers= list(df)
     popped = headers.pop()
     headers.insert(0,popped)
-
-    print(headers)
     for columnName in headers:
-        print(columnName)
         DFcolumns.append(TableColumn(field=columnName, title=columnName),)
-
 
     DFdata_table = DataTable(source=DFsource, columns=DFcolumns, width=400, height=600)
 
+    outputDirectory=TextInput(value='',title='Output directory:')
+    formatSelection = Select(title="Format:", value=".csv", options=[".csv", ".xlsx",])
+
+    buttonExportCSV = Button(label="Export")
+    buttonExportCSV.on_click(partial(export,project))
+
+    ###Condition data
+
+    solargisLocation = TextInput(value=project.solargisFileLocation, title="Solargis file location:")
+    year = str(project.GHIdf.index.values[0])[0:4]
+
+    solargisFileYear= TextInput(value=year, title="Solargis file year:")
+    buttonChangeSolargis = Button(label="Change file location")
+    buttonChangeSolargis.on_click(partial(changeSolargisLocation,project,solargisLocation,solargisFileYear))
+
+    dataConTitle = Div(text="""<p style="font-size:24px;text-align: left"> Condition data""",
+            width=1000, height=10)
+    div11 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
+
+    GHIdf = project.GHIdf
+    GHIdf=GHIdf.groupby(pd.TimeGrouper(freq='M'))
+    GHIdf=GHIdf.mean().round(2)
+    GHIdf['Date'] = pd.to_datetime(GHIdf.index).strftime('%b %Y')
+    GHIDFdata = dict(GHIdf)
+    GHIDFsource = ColumnDataSource(GHIDFdata)
+    GHIDFcolumns=[]
+    GHIheaders= list(GHIdf)
+    popped = GHIheaders.pop()
+    GHIheaders.insert(0,popped)
+    for columnName in GHIheaders:
+        GHIDFcolumns.append(TableColumn(field=columnName, title=columnName),)
+
+    GHIDFdata_table = DataTable(source=GHIDFsource, columns=GHIDFcolumns, width=400, height=320)
+
+    outputDirectoryCond=TextInput(value='',title='Output directory:')
+    formatSelectionCond = Select(title="Format:", value=".csv", options=[".csv", ".xlsx",])
+
+    buttonExportCSVCond = Button(label="Export")
+    buttonExportCSVCond.on_click(partial(exportCond,project))
+
+    separationdiv = Div(text="""""",
+        width=400, height=20)
+
+    deleteProjectButton = Button(label="Delete project",button_type="danger")
+    deleteProjectButton.on_click(partial(deleteProjectScreen,project))
 
 
-
-    for info in [[DFdata_table],[buttonBack]]:
+    for info in [[DFdata_table],[outputDirectory],[formatSelection],[buttonExportCSV],[],[],[],[dataConTitle],[div11],[solargisLocation,solargisFileYear],[buttonChangeSolargis],[GHIDFdata_table],[outputDirectoryCond],[formatSelectionCond],[buttonExportCSVCond],[div7],[],[],[],[buttonBack,separationdiv,deleteProjectButton]]:
         newLayout.append(info)
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
+
 
 
 
@@ -1397,6 +1619,8 @@ def showPreInspection(ID):
 
     buttonBack = Button(label="Back")
     buttonBack.on_click(goToHomescreen)
+
+
 
     lay = layout([[headingTxt],[div],[title1Txt],[projectDateBegin,projectDateEnd,inspectButton],[sepdiv],[buttonBack]])
 
@@ -1425,6 +1649,25 @@ def resetSettings():
     DH.resetSettings()
     showSettingsScreen()
 
+def ResetDBAndReturnToHome():
+    DH.resetDB()
+    goToHomescreen()
+
+def confirmDeleteDB():
+    headingTxt = Div(text="""<p style="font-size:28px;text-align: center"> Reset Database: """,
+            width=400, height=30)
+
+    headingdiv = Div(text="""<hr noshade size=4 color=green>""",
+        width=400, height=10)
+
+    buttonDeleteProject=Button(label='Reset database',button_type="danger")
+    buttonDeleteProject.on_click(partial(ResetDBAndReturnToHome))
+    buttonCancelDeletion=Button(label='Cancel')
+    buttonCancelDeletion.on_click(showSettingsScreen)
+
+    newLayout=[[headingTxt],[headingdiv],[buttonDeleteProject],[buttonCancelDeletion]]
+    globNewLayout.children = []
+    globNewLayout.children=[layout(newLayout)]
 
 def showSettingsScreen():
     headingTxt = Div(text="""<p style="font-size:20px;text-align: center"> Settings """,
@@ -1448,8 +1691,11 @@ def showSettingsScreen():
     resetButton = Button(label="Reset settings")
     resetButton.on_click(resetSettings)
 
+    resetDBButton = Button(label="Reset Database",button_type="danger")
+    resetDBButton.on_click(confirmDeleteDB)
 
-    lay = layout([[headingTxt],[div],middleLayout,[saveSettingsButton],[resetButton],[buttonBack]])
+
+    lay = layout([[headingTxt],[div],middleLayout,[saveSettingsButton],[resetButton],[resetDBButton],[buttonBack]])
 
     globNewLayout.children = []
     globNewLayout.children =[lay]

@@ -140,6 +140,7 @@ def collectSolarisData(path,year):
     return df
 
 
+
 '''
 def reindexforYear(df):
     df['month'] = pd.to_datetime(df.index.values, format='%Y-%m')

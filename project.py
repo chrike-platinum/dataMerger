@@ -58,10 +58,11 @@ class Project(object):
         self.maintenanceData = maintanceData[2]
         self.internetProblems=maintanceData[3]
 
+
         self.GHIdf=GHIdf
         self.DBID=None
         self.solargisFileLocation=solargisFileLocation
-        #self.inverterData=[]
+
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -130,10 +131,26 @@ class Project(object):
         df = self.GHIdf
         return df[df.columns[5]][beginDate:endDate].mean()
 
+    def removeInverter(self,inverterID,inverter):
+        self.inverters.remove((inverterID,inverter))
+        i = 0
+        newInverterlist=[]
+        for tuple in self.inverters:
+            newInverterlist.append((i,tuple[1]))
+            i+=1
+        self.inverters=newInverterlist
 
+    def addInverter(self,inverter):
+        newID = self.inverters[-1][0]+1
+        self.inverters.append((newID,inverter))
+        self.updateInverterData()
 
     def setDBID(self,ID):
         self.DBID=ID
+
+    def updateSolargisFile(self,solargisFilePath,year):
+        self.solargisFileLocation=str(solargisFilePath)
+        self.GHIdf = CE.collectSolarisData(self.solargisFileLocation,year)
 
 
 

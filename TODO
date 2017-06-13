@@ -18,6 +18,7 @@ check for extra files every startup
 
 check input values
 
-reset database
+make own export formats also readable
 
-delete project
+connect settings with inside work
+

@@ -6,6 +6,7 @@ __author__ = 'christiaanleysen'
 import datetime
 import pandas as pd
 import re
+import dataHandler as DH
 
 
 
@@ -190,7 +191,7 @@ def createInfoBlockTable(c,y,doc,leftTitle,leftList,rightTitle,rightList,styleNo
     frameLList.addFromList([leftInformation],c)
     frameRList.addFromList([rightInformation],c)
 
-
+#testMethod (not used)
 def testPDF(tempPlotDir,isTechReportRequest=True):
     todayString = datetime.date.today().strftime("%B %d, %Y")
     doc = SimpleDocTemplate('test.pdf', pagesize = A4, title = 'Solcor injection rate Report ', author ='christiaan' )
@@ -390,10 +391,13 @@ def testPDF(tempPlotDir,isTechReportRequest=True):
 
 
 def testPDF2(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechReportRequest=True):
+    outputLocation = DH.getSettings()['PDF-output directory']
+    if outputLocation != '':
+        outputLocation=outputLocation+'/'
     beginDate=createReadableDate(beginDate)
     endDate=createReadableDate(endDate)
     todayString = datetime.date.today().strftime("%d/%m/%Y")
-    doc = SimpleDocTemplate('test.pdf', pagesize = A4, title = 'Solcor injection rate Report ', author ='ChristiaanLeysen' )
+    doc = SimpleDocTemplate(str(outputLocation)+'test.pdf', pagesize = A4, title = 'Solcor injection rate Report ', author ='ChristiaanLeysen' )
     frameL = Frame(doc.leftMargin-30, doc.bottomMargin, doc.width/2-6, doc.height-4.7*cm, id='col1')
     frameR = Frame(doc.leftMargin-20+doc.width/2+6, doc.bottomMargin, doc.width/2+30,
                doc.height-4.7*cm, id='col2')
@@ -405,8 +409,7 @@ def testPDF2(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechRe
     pdfName = 'Solcor PV performance analysis '+str(project.name)+' '+str(beginDate)+' '+str(endDate)+'.pdf'
     if isTechReportRequest:
         pdfName = 'Solcor PV performance analysis '+str(project.name)+' '+str(beginDate)+' '+str(endDate)+' (technical report)'+'.pdf'
-    print('file name: '+pdfName)
-    c  = Canvas(pdfName)
+    c  = Canvas(str(outputLocation)+pdfName)
 
     styles = getSampleStyleSheet()
     styleNormal = styles['Normal']
@@ -646,5 +649,6 @@ def testPDF2(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechRe
     print('saving PDF...')
     c.save()
     print('PDF: '+pdfName+' saved!')
+    print('Location: '+str(outputLocation))
 
-testPDF('tempPlots/')
+
