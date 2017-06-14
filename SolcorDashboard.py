@@ -63,8 +63,7 @@ def print_full(x):
     print(x)
     pd.reset_option('display.max_rows')
 
-cloudyDaythresholdPercentage = 0.2
-rainyDaythresholdPercentage = 0.1
+
 
 #banner = figure(x_range=(0,1), y_range=(0,1))
 
@@ -431,7 +430,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 #####ADD Cloud DATA
-        amountOfCloudDays = len([x for x in cloudData if x >= cloudyDaythresholdPercentage])
+        amountOfCloudDays = len([x for x in cloudData if float(x*100) >= cloudyDaythresholdPercentage])
         cloudDataShiftIndex = cloudData.index + pd.DateOffset(hours=12)
 
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
@@ -462,8 +461,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
             i+=1
 
 #######ADD RAIN DATA
-
-        amountOfRainDays = len([x for x in rain if x >= rainyDaythresholdPercentage])
+        amountOfRainDays = len([x for x in rain if float(x*100) >= rainyDaythresholdPercentage])
         rainDataShiftIndex = rain.index + pd.DateOffset(hours=12)
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
         rainLabel = [str(int(round(100*(x),0)))+'%' for x in rain.values.tolist()]
@@ -493,7 +491,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 ######fill info banner
-        leftlist = [('Number of cloudy days',amountOfCloudDays),('Number of rainy days',amountOfRainDays)]
+        leftlist = [('Number of rainy days',amountOfRainDays),('Number of cloudy days',amountOfCloudDays)]
         printObject.nrOfCloudyDays=amountOfCloudDays
         printObject.nrOfRainyDays=amountOfRainDays
 
@@ -1689,7 +1687,10 @@ def showSettingsScreen():
 
     settingsDict=DH.getSettings()
     middleLayout=[]
-    for settingLabel in settingsDict:
+
+    k = list(settingsDict.keys())
+    k.sort()
+    for settingLabel in k:
         middleLayout.append(TextInput(value=str(settingsDict[settingLabel]), title=settingLabel))
 
 
@@ -1801,6 +1802,13 @@ def saveModus():
 
 def mainscreen(firstTime):
     global globNewLayout
+    global cloudyDaythresholdPercentage
+    global rainyDaythresholdPercentage
+    cloudyDaythresholdPercentage = float(DH.getSettings()['Cloudy day percentage'])
+    rainyDaythresholdPercentage = float(DH.getSettings()['Rainy day percentage'])
+
+
+
     divPicture = Div(text="<img src=https://dl.dropboxusercontent.com/s/kv1p5r6hvjpwi4z/Solcor%20logo.jpg?dl=0>")
 
     welcomeTxt = Div(text="""<p style="font-size:20px;text-align: center"> Solcor operational dashboard """,
