@@ -26,7 +26,7 @@ def updateAllProjects():
     projectList = DH.getAllSavedProjects()
     for project in projectList:
         checkForDataUpdates(project)
-        time.sleep(1)
+        #time.sleep(1)
         DH.saveProject(project)
 
 

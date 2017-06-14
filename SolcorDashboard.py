@@ -369,10 +369,16 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
     return inverterGraph
 
-def handlemakePDF(divPDF,project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory):
+def handlemakePDF(reportNumberText,divPDF,project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory):
+    if reportNumberText.value != '':
+        reportNumber2 = reportNumberText.value
+    else:
+        reportNumber2=reportNumber
+
+
     divPDF.text ="""<p style="font-size:28px ;text-align: center">Creating PDF..."""
     #PM.makePDFReport(project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory)
-    PM.testPDF2(tempPlotDir,project,reportNumber,projectDateBeginString,projectDateEndString,printObject,isTechReportRequest=isTechReport)
+    PM.testPDF2(tempPlotDir,project,reportNumber2,projectDateBeginString,projectDateEndString,printObject,isTechReportRequest=isTechReport)
     divPDF.text ="""<p style="font-size:28px ;text-align: center">PDF created!"""
 
 def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir):
@@ -381,16 +387,17 @@ def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain
     buttonCreateTechnicalReport = Button(label="Create technical report")
     divPDF = Div(text="""<p style="font-size:28px ;text-align: center">Solcor""",
     width=600, height=100)
-    buttonCreateExecReport.on_click(partial(handlemakePDF,divPDF,project,projectDateBeginString,projectDateEndString,False,reportNumber,tempPlotDir,outputDirectory))
-    buttonCreateTechnicalReport.on_click(partial(handlemakePDF,divPDF,project,projectDateBeginString,projectDateEndString,True,reportNumber,tempPlotDir,outputDirectory))
+    reportNumberText = TextInput(value='',title='Report number (optional)')
+    buttonCreateExecReport.on_click(partial(handlemakePDF,reportNumberText,divPDF,project,projectDateBeginString,projectDateEndString,False,reportNumber,tempPlotDir,outputDirectory))
+    buttonCreateTechnicalReport.on_click(partial(handlemakePDF,reportNumberText,divPDF,project,projectDateBeginString,projectDateEndString,True,reportNumber,tempPlotDir,outputDirectory))
 
 
 
-    buttonBanner = row([buttonCreateExecReport,divPDF,buttonCreateTechnicalReport])
+    buttonBanner = row([buttonCreateExecReport,divPDF,buttonCreateTechnicalReport,reportNumberText])
 
     return buttonBanner
 
-def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString):
+def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,autoPrint=False,reportType=None):
 
         buttonBanner = createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir)
 
@@ -449,7 +456,12 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 #####ADD Cloud DATA
+        cloudyDaythresholdPercentage = float(DH.getSettings()['Percentage cloudy day'])
         amountOfCloudDays = len([x for x in cloudData if float(x*100) >= cloudyDaythresholdPercentage])
+        begindate= datetime.datetime.strptime(projectDateBeginString, '%Y-%m-%d %H:%M:%S')
+        enddate= datetime.datetime.strptime(projectDateEndString, '%Y-%m-%d %H:%M:%S')
+
+        cloudData=cloudData[begindate:enddate]
         cloudDataShiftIndex = cloudData.index + pd.DateOffset(hours=12)
 
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
@@ -481,6 +493,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
             i+=1
 
 #######ADD RAIN DATA
+        rainyDaythresholdPercentage = float(DH.getSettings()['Percentage rainy day'])
         amountOfRainDays = len([x for x in rain if float(x*100) >= rainyDaythresholdPercentage])
         rainDataShiftIndex = rain.index + pd.DateOffset(hours=12)
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
@@ -521,7 +534,11 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         internetProbString = [createReadableDate(str(internetProb.date()))[0:5] for internetProb in project.internetProblems]
         gridProbString = [createReadableDate(str(gridProb.date()))[0:5] for gridProb in project.gridProblemData]
         maintenaceString = [createReadableDate(str(maintenace.date()))[0:5] for maintenace in project.maintenanceData]
-        extraCommentString = [str(comment) for comment in project.commentList]
+
+
+
+
+        extraCommentString = [str(comment) for comment in project.commentList if begindate<=datetime.datetime.strptime(comment[0], '%d-%m-%Y')<=enddate]
         extraCommentString=" ".join(extraCommentString)
         extraCommentString=re.sub("(.{80})", "\\1\n", extraCommentString, 0, re.DOTALL)
 
@@ -825,18 +842,36 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         buttonBack.on_click(goToHomescreen)
 
         globalLayout = column([buttonBanner,globalkWGraph,GlobalKwhGraph,inverterGraphs,buttonBack])
+        if autoPrint==False:
+            globNewLayout.children = []
+            globNewLayout.children =[globalLayout]
+            htmlFileLocation= DH.getSettings()['HTML-output directory']
+            BIO.output_file(filename=htmlFileLocation+'/'+project.name+' '+projectDateBeginString+' '+projectDateEndString+'.html',mode='inline')
+            file = BIO.save(curdoc())
+            print('HTML file saved at:',file)
 
-        globNewLayout.children = []
-        globNewLayout.children =[globalLayout]
+        else:
+            dummyDiv = Div(text="""""")
+            dummytext = TextInput(value='',title='dummy')
+            outputDirectory=''
+            if reportType == None:
+                print('No PDF report type selected')
+            else:
+                if reportType.lower()=='exec':
+                    handlemakePDF(dummytext,dummyDiv,project,projectDateBeginString,projectDateEndString,False,reportNumber,tempPlotDir,outputDirectory)
+                else:
+                    if reportType.lower() =='tech':
+                        handlemakePDF(dummytext,dummyDiv,project,projectDateBeginString,projectDateEndString,True,reportNumber,tempPlotDir,outputDirectory)
+
+                    else:
+                        if reportType.lower() =='both':
+                            handlemakePDF(dummytext,dummyDiv,project,projectDateBeginString,projectDateEndString,False,reportNumber,tempPlotDir,outputDirectory)
+                            handlemakePDF(dummytext,dummyDiv,project,projectDateBeginString,projectDateEndString,True,reportNumber,tempPlotDir,outputDirectory)
+                        else:
+                            print('C Error: PDF report type is wrong')
 
 
-        script, div = components(curdoc())
 
-        BIO.output_file(filename=project.name+' '+projectDateBeginString+' '+projectDateEndString+'.html',mode='inline')
-
-        #BIO.show(curdoc(), new='tab', notebook_handle=False, notebook_url='localhost:8888')
-        file = BIO.save(curdoc())
-        print('File saved at:',file)
 
 
 def goToHomescreen():
@@ -902,14 +937,14 @@ def collectData(statusBanner,saveData=False):
 
 
         maintancelist=[cleaningData,gridProbData,maintanceData,internetProbData]
+        if (saveData==False):
+            projectDateBeginString=str(projectDateBegin.value)
+            projectDateBeginString = datetime.datetime.strptime(projectDateBeginString, '%d-%m-%Y %H:%M:%S')
+            projectDateBeginString = projectDateBeginString.strftime("%Y-%m-%d %H:%M:%S")
 
-        projectDateBeginString=str(projectDateBegin.value)
-        projectDateBeginString = datetime.datetime.strptime(projectDateBeginString, '%d-%m-%Y %H:%M:%S')
-        projectDateBeginString = projectDateBeginString.strftime("%Y-%m-%d %H:%M:%S")
-
-        projectDateEndString =str(projectDateEnd.value)
-        projectDateEndString = datetime.datetime.strptime(projectDateEndString, '%d-%m-%Y %H:%M:%S')
-        projectDateEndString = projectDateEndString.strftime("%Y-%m-%d %H:%M:%S")
+            projectDateEndString =str(projectDateEnd.value)
+            projectDateEndString = datetime.datetime.strptime(projectDateEndString, '%d-%m-%Y %H:%M:%S')
+            projectDateEndString = projectDateEndString.strftime("%Y-%m-%d %H:%M:%S")
 
         extraCommentsDateString = str(extraCommentsDate.value)
         extraCommentsDateString = datetime.datetime.strptime(extraCommentsDateString, '%d-%m-%Y')
@@ -917,7 +952,10 @@ def collectData(statusBanner,saveData=False):
 
 
         ExtraData = (extraCommentsDateString,str(extraCommentX.value))
-        reportNumber = str(reportNumberTxt.value)
+        if (saveData==False):
+            reportNumber = str(reportNumberTxt.value)
+        else:
+            reportNumber=None
         GHIdf = CE.collectSolarisData(solargisLocation.value,str(solargisYear.value))
 
 
@@ -1032,7 +1070,6 @@ def createNewProjectScreen(quickReport=False):
 
 
     projectNameTxt = TextInput(value="Nueces Del Choapa", title="Project name:")
-    reportNumberTxt= TextInput(value="1", title="Report number:")
 
     projectContactTxt = TextInput(value="Leonardo Pasten", title="Contact person:")
     projectStreetTxt = TextInput(value="Principal el Tambo", title="Street + nr:")
@@ -1054,6 +1091,7 @@ def createNewProjectScreen(quickReport=False):
 
 
     if (quickReport):
+        reportNumberTxt= TextInput(value="1", title="Report number:")
         projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date report:")
         projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date report:")
 
@@ -1128,7 +1166,7 @@ def createNewProjectScreen(quickReport=False):
                  [div],[total,totalkw,totExtra],[div2],[inverter1Type,filePick1,fileColumn1,inverter1SampleRate],[inverter1Tot,inverter1Totkw,inverter1Extra],
                  [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraCommentX,extraCommentsDate,solargisLocation,solargisYear],[buttonBack,nextButton,statusBanner]]
     else:
-        newLayout = [[headingTxt],[headingDiv],[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination],
+        newLayout = [[headingTxt],[headingDiv],[projectNameTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination],
                  [div],[total,totalkw,totExtra],[div2],[inverter1Type,filePick1,fileColumn1,inverter1SampleRate],[inverter1Tot,inverter1Totkw,inverter1Extra],
                  [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraCommentX,extraCommentsDate,solargisLocation,solargisYear],[buttonBack,nextButton,statusBanner]]
 
@@ -1136,8 +1174,9 @@ def createNewProjectScreen(quickReport=False):
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
 
-#TODO
-def collectInspectionData(project,projectDateBegin,projectDateEnd):
+
+def collectInspectionData(project,projectDateBegin,projectDateEnd,printchoice,statusDiv,reportNumber,autoPrint=False):
+    statusDiv.text = "Creating PDF..."
     projectDateBeginString = projectDateBegin.value
     projectDateEndString = projectDateEnd.value
 
@@ -1161,7 +1200,28 @@ def collectInspectionData(project,projectDateBegin,projectDateEnd):
 
     cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
     rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-    showProjectScreen("Not assigned",project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString)
+
+    reportType = None
+    if printchoice != None:
+        reportSelection = printchoice.active
+        if 0 in reportSelection:
+            reportType='Tech'
+        if 1 in reportSelection:
+            reportType='Exec'
+        if len(reportSelection)==2:
+            reportType='Both'
+
+
+    if reportNumber != None:
+        if reportNumber.value == '':
+            reportNr='n/a'
+        else:
+            reportNr=str(reportNumber.value)
+    else:
+        reportNr="n/a"
+
+    showProjectScreen(reportNr,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,autoPrint=autoPrint,reportType=reportType)
+    statusDiv.text = "PDF ready! Saved at: "+str(DH.getSettings()['PDF-output directory'])
 
 def saveSelection(attr, old, new):
     global selection
@@ -1182,7 +1242,7 @@ def removeMaintenance(project,data_table):
     if kindToRemove == 'Internet problems':
         project.internetProblems.remove(dateToRemove)
     DH.saveProject(project)
-    time.sleep(1)
+    time.sleep(1) #TODO check save time
     showManagementScreen('ID'+str(project.DBID))
 def collectNewMaintanceData(project):
     cleaningData = cleaningDateX.value.split(',')
@@ -1663,15 +1723,40 @@ def showPreInspection(ID):
     div = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=20)
 
-    title1Txt = Div(text="""<p style="font-size:16px;text-align: left"><u> Inspection period:</u>""",
+    title1Txt = Div(text="""<p style="font-size:16px;text-align: left"><u> Inspect period:</u>""",
             width=180, height=10)
     projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date:")
     projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date:")
 
+    dummyDiv = Div(text="""""",
+            width=300, height=10)
+
     inspectButton = Button(label="Inspect")
-    inspectButton.on_click(partial(collectInspectionData,project,projectDateBegin,projectDateEnd))
+    inspectButton.on_click(partial(collectInspectionData,project,projectDateBegin,projectDateEnd,None,dummyDiv,None,autoPrint=False))
 
     sepdiv = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=20)
+
+
+    titlePrintTxt = Div(text="""<p style="font-size:16px;text-align: left"><u> Export PDF report for period:</u>""",
+            width=300, height=10)
+
+    projectPrintDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date:")
+    projectPrintDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date:")
+
+    reportNumber = TextInput(value="", title="Report number (optional):")
+
+    reportChoice = CheckboxGroup(
+        labels=["Tech report", "Exec report"], active=[0])
+
+
+    statusDiv = Div(text="""""",
+            width=600, height=10)
+
+    printButton = Button(label='Export report(s)')
+    printButton.on_click(partial(collectInspectionData,project,projectPrintDateBegin,projectPrintDateEnd,reportChoice,statusDiv,reportNumber,autoPrint=True))
+
+    sepprintdiv = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=20)
 
     buttonBack = Button(label="Back")
@@ -1679,7 +1764,8 @@ def showPreInspection(ID):
 
 
 
-    lay = layout([[headingTxt],[div],[title1Txt],[projectDateBegin,projectDateEnd,inspectButton],[sepdiv],[buttonBack]])
+    lay = layout([[headingTxt],[div],[title1Txt],[],[projectDateBegin,projectDateEnd],[inspectButton],[sepdiv],[titlePrintTxt],[],[projectPrintDateBegin,projectPrintDateEnd,reportChoice],
+                  [reportNumber],[printButton],[statusDiv],[sepprintdiv], [buttonBack]])
 
     globNewLayout.children = []
     globNewLayout.children =[lay]
@@ -1761,8 +1847,15 @@ def showSettingsScreen():
     reloadDBButton = Button(label="Reload Database",)
     reloadDBButton.on_click(reloadDBAndReturnToHome)
 
-    lay = layout([[headingTxt],[div],middleLayout,[saveSettingsButton],[resetButton],[resetDBButton],[reloadDBButton],[buttonBack]])
+    lay = [[headingTxt],[div]]
 
+    for setting in middleLayout:
+        lay.append([setting])
+
+    for info in [[saveSettingsButton],[resetButton],[resetDBButton],[reloadDBButton],[buttonBack]]:
+        lay.append(info)
+
+    lay = layout(lay)
     globNewLayout.children = []
     globNewLayout.children =[lay]
 
@@ -1795,7 +1888,7 @@ def homescreen(firstTime):
     manageDropDown.on_change('value',partial(manageProject))
 
 
-    inspectdropdown = Dropdown(label="Inspect Projects", button_type="warning", menu=menu)
+    inspectdropdown = Dropdown(label="Inspect & print Projects", button_type="warning", menu=menu)
     inspectdropdown.on_change('value', partial(inspectProject))
 
 
@@ -1850,16 +1943,13 @@ def saveModus():
     globNewLayout.children = []
     globNewLayout.children =[lay]
 
+def enterDashboard(statusDiv):
+    statusDiv.text='Loading projects...'
+    homescreen(True)
 
 
 def mainscreen(firstTime):
     global globNewLayout
-    global cloudyDaythresholdPercentage
-    global rainyDaythresholdPercentage
-    cloudyDaythresholdPercentage = float(DH.getSettings()['Cloudy day percentage'])
-    rainyDaythresholdPercentage = float(DH.getSettings()['Rainy day percentage'])
-
-
 
     divPicture = Div(text="<img src=https://dl.dropboxusercontent.com/s/kv1p5r6hvjpwi4z/Solcor%20logo.jpg?dl=0>")
 
@@ -1868,14 +1958,21 @@ def mainscreen(firstTime):
 
     div = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
+    statusDiv = Div(text="""""",
+            width=600, height=30)
 
     buttonEnter = Button(label="Go to dashboard")
-    buttonEnter.on_click(partial(homescreen,True))
+    buttonEnter.on_click(partial(enterDashboard,statusDiv))
 
     buttonSettings = Button(label="Save modus")
     buttonSettings.on_click(saveModus)
 
-    lay = layout([[divPicture],[welcomeTxt],[div],[buttonEnter,buttonSettings]])
+    buttonCreateQuickReport2 = Button(label="Create quick report")
+    buttonCreateQuickReport2.on_click(partial(createNewProjectScreen,quickReport=True))
+
+
+
+    lay = layout([[divPicture],[welcomeTxt],[div],[buttonEnter,buttonSettings,buttonCreateQuickReport2],[statusDiv]])
     if firstTime:
         globNewLayout=lay
         curdoc().add_root(globNewLayout)

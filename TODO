@@ -7,24 +7,24 @@ average cloud data
 /Users/christiaan/PycharmProjects/dataMerger/SolcorDashboard.py:831: FutureWarning: to_datetime is deprecated. Use self.to_pydatetime()
   GHIdf = CE.collectSolarisData(solargisLocation.value,solargisYear.value)
 
-check directories with accents
-
 /Users/christiaan/PycharmProjects/dataMerger/CalculationEngine.py:162: FutureWarning: to_datetime is deprecated. Use self.to_pydatetime()
   print(collectSolarisData(path+name,2017))
 
 
 
-check input values
-
-make own export formats also readable
-
-Add dates to print
-
-Rain and cloud label not in place if few days are selected
+check directories with accents
 
 Delete specific data from dataframes
 
-html files location settings
+Check input values
+
+make own export formats also readable
+
+Check comment prints on pdf
+
+Check back button create quick report on main screen
+
+
 
 
 
