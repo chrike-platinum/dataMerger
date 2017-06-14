@@ -69,7 +69,7 @@ class Project(object):
 
 
 
-    def updateInverterData(self):
+    def updateInitialInverterData(self):
         i=0
         listOfDF=[]
         inverterFilePaths = []
@@ -83,16 +83,23 @@ class Project(object):
         for path,col,inverterType in zip(inverterFilePaths,inverterColumnNumbers,inverterTypes):
                 inverter = self.getInverter(i)
                 inverterData = DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i),inverter.sampleRate)
-                inverter.updateInverterData(inverterData)
+                inverter.updateInitialInverterData(inverterData)
                 i+=1
 
-        #
+    def updateProjectWithNextInverterData(self):
+        for inverter in self.inverters:
+            inverter.updateNextInverterData()
+
+
+
 
     def getAllInverterDatafromTo(self,projectDateBeginString,projectDateEndString):
         listOfDF=[]
         for invertertuple in self.inverters:
             listOfDF.append(invertertuple[1].inverterData)
         df = pd.concat(listOfDF,axis=1,ignore_index=False)
+        print('df',projectDateBeginString)
+        print('dfPart',df[projectDateBeginString:projectDateEndString])
         return df[projectDateBeginString:projectDateEndString]
 
     def getAllInverterData(self):
@@ -143,14 +150,22 @@ class Project(object):
     def addInverter(self,inverter):
         newID = self.inverters[-1][0]+1
         self.inverters.append((newID,inverter))
-        self.updateInverterData()
+        self.updateInitialInverterData()
 
     def setDBID(self,ID):
         self.DBID=ID
 
     def updateSolargisFile(self,solargisFilePath,year):
         self.solargisFileLocation=str(solargisFilePath)
-        self.GHIdf = CE.collectSolarisData(self.solargisFileLocation,year)
+        df=self.GHIdf
+        newGHIdf = CE.collectSolarisData(self.solargisFileLocation,year)
+        if (not newGHIdf.empty):
+            returndf = newGHIdf.merge(df,right_index=True,left_index=True,how='outer',on=list(df))
+        else:
+            returndf=df
+        print('return',returndf)
+        self.GHIdf=returndf
+
 
 
 

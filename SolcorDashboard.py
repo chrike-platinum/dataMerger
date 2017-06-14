@@ -9,8 +9,6 @@ global PDFoutput
 
 
 
-
-
 from bokeh.layouts import widgetbox, row, column, layout
 from bokeh.models.widgets import CheckboxGroup
 from bokeh.models import Button, HoverTool
@@ -73,8 +71,6 @@ rainyDaythresholdPercentage = 0.1
 source = ColumnDataSource(dict(url = ['SolcorBanner2.png']))
 xdr = Range1d(start=0, end=1)
 ydr = Range1d(start=0, end=1)
-
-
 
 
 
@@ -872,7 +868,7 @@ def collectData(statusBanner,saveData=False):
 
         ExtraData = (extraCommentsDateString,str(extraCommentX.value))
         reportNumber = str(reportNumberTxt.value)
-        GHIdf = CE.collectSolarisData(solargisLocation.value,str(projectDateBegin.value)[6:10])
+        GHIdf = CE.collectSolarisData(solargisLocation.value,str(solargisYear.value))
 
 
 
@@ -967,7 +963,7 @@ def createNewProjectScreen(quickReport=False):
     global projectNameTxt,reportNumberTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
     global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,inverter1SampleRate
     global inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,inveter2Extra,filePick2
-    global cleaningDate,extraCommentX,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation,extraCommentsDate
+    global cleaningDate,extraCommentX,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation,solargisYear,extraCommentsDate
     div0 = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
     global fileColumn1,fileColumn2
@@ -1007,9 +1003,11 @@ def createNewProjectScreen(quickReport=False):
     structureDD = Select(title='Structure', value='Parallel to roof', options=["Parallel to roof","Structure with inclination"])
 
 
+    if (quickReport):
+        projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date report:")
+        projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date report:")
 
-    projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date report:")
-    projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date report:")
+
 
     div = Div(text="""<hr noshade size=4 color=green>""",
         width=1100, height=30)
@@ -1051,6 +1049,7 @@ def createNewProjectScreen(quickReport=False):
     extraCommentX = TextInput(value="Here is a comment...", title="Comment:")
     extraCommentsDate=TextInput(value="10-04-2017", title="Date comment:")
     solargisLocation = TextInput(value='/Users/christiaan/Desktop/Solcor/dataMergeWeek/NDC_PV-8627-1705-1780_-31.783--70.984.xls', title="Solargis file location:")
+    solargisYear = TextInput(value='2017', title="Solargis file year:")
 
 
     div4 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
@@ -1074,21 +1073,29 @@ def createNewProjectScreen(quickReport=False):
     else:
         nextButton = Button(label='Add project')
         nextButton.on_click(partial(collectData,statusBanner,saveData=True))
-    newLayout = [[headingTxt],[headingDiv],[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],
+    if (quickReport):
+        newLayout = [[headingTxt],[headingDiv],[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],
                  [div],[total,totalkw,totExtra],[div2],[inverter1Type,filePick1,fileColumn1,inverter1SampleRate],[inverter1Tot,inverter1Totkw,inverter1Extra],
-                 [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraCommentX,extraCommentsDate,solargisLocation],[buttonBack,nextButton,statusBanner]]
+                 [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraCommentX,extraCommentsDate,solargisLocation,solargisYear],[buttonBack,nextButton,statusBanner]]
+    else:
+        newLayout = [[headingTxt],[headingDiv],[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination],
+                 [div],[total,totalkw,totExtra],[div2],[inverter1Type,filePick1,fileColumn1,inverter1SampleRate],[inverter1Tot,inverter1Totkw,inverter1Extra],
+                 [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraCommentX,extraCommentsDate,solargisLocation,solargisYear],[buttonBack,nextButton,statusBanner]]
 
 
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
 
+#TODO
+def collectInspectionData(project,projectDateBegin,projectDateEnd):
+    projectDateBeginString = projectDateBegin.value
+    projectDateEndString = projectDateEnd.value
 
-def collectInspectionData(project,projectDateBeginString,projectDateEndString):
     projectDateBeginString=str(projectDateBeginString)
     projectDateBeginString = datetime.datetime.strptime(projectDateBeginString, '%d-%m-%Y %H:%M:%S')
     projectDateBeginString = projectDateBeginString.strftime("%Y-%m-%d %H:%M:%S")
 
-    projectDateEndString =projectDateEndString
+    projectDateEndString = projectDateEndString
     projectDateEndString = datetime.datetime.strptime(projectDateEndString, '%d-%m-%Y %H:%M:%S')
     projectDateEndString = projectDateEndString.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1267,7 +1274,7 @@ def saveNewInverter(project,inverterXType,inverterXTotKWP,inverterXTotKW,inverte
 
 
 
-def addInverterLayout(inverterID,project,year):
+def addInverterLayout(inverterID,project):
     inverterID=int(inverterID)+1
     oldLayout=newLayout
     inverterXType = TextInput(value="20000TL-30", title="Inverter "+str(inverterID)+" type:")
@@ -1528,7 +1535,7 @@ def showManagementScreen(ID):
 
 
     ###production data information:
-    df = project.getAllInverterData()
+    df = project.getAllInverterData().round(2)
     df['Date'] = pd.to_datetime(df.index).strftime('%d/%m/%Y %H:%M:%S')
     DFdata = dict(df)
     DFsource = ColumnDataSource(DFdata)
@@ -1539,7 +1546,7 @@ def showManagementScreen(ID):
     for columnName in headers:
         DFcolumns.append(TableColumn(field=columnName, title=columnName),)
 
-    DFdata_table = DataTable(source=DFsource, columns=DFcolumns, width=400, height=600)
+    DFdata_table = DataTable(source=DFsource, columns=DFcolumns, width=500, height=600)
 
     outputDirectory=TextInput(value='',title='Output directory:')
     formatSelection = Select(title="Format:", value=".csv", options=[".csv", ".xlsx",])
@@ -1553,7 +1560,7 @@ def showManagementScreen(ID):
     year = str(project.GHIdf.index.values[0])[0:4]
 
     solargisFileYear= TextInput(value=year, title="Solargis file year:")
-    buttonChangeSolargis = Button(label="Change file location")
+    buttonChangeSolargis = Button(label="Update file")
     buttonChangeSolargis.on_click(partial(changeSolargisLocation,project,solargisLocation,solargisFileYear))
 
     dataConTitle = Div(text="""<p style="font-size:24px;text-align: left"> Condition data""",
@@ -1612,7 +1619,7 @@ def showPreInspection(ID):
     projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date:")
 
     inspectButton = Button(label="Inspect")
-    inspectButton.on_click(partial(collectInspectionData,project,projectDateBegin.value,projectDateEnd.value))
+    inspectButton.on_click(partial(collectInspectionData,project,projectDateBegin,projectDateEnd))
 
     sepdiv = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=20)
@@ -1651,6 +1658,10 @@ def resetSettings():
 
 def ResetDBAndReturnToHome():
     DH.resetDB()
+    goToHomescreen()
+
+def reloadDBAndReturnToHome():
+    DH.reloadDB()
     goToHomescreen()
 
 def confirmDeleteDB():
@@ -1694,14 +1705,21 @@ def showSettingsScreen():
     resetDBButton = Button(label="Reset Database",button_type="danger")
     resetDBButton.on_click(confirmDeleteDB)
 
+    reloadDBButton = Button(label="Reload Database",)
+    reloadDBButton.on_click(reloadDBAndReturnToHome)
 
-    lay = layout([[headingTxt],[div],middleLayout,[saveSettingsButton],[resetButton],[resetDBButton],[buttonBack]])
+    lay = layout([[headingTxt],[div],middleLayout,[saveSettingsButton],[resetButton],[resetDBButton],[reloadDBButton],[buttonBack]])
 
     globNewLayout.children = []
     globNewLayout.children =[lay]
 
 
 def homescreen(firstTime):
+    if firstTime:
+        PE.updateAllProjects()
+        print('projects updated')
+        print('list',[(project.name,project.DBID,len(project.inverters[0][1].inverterData)) for project in DH.getAllSavedProjects()])
+
     global globNewLayout
 
     welcomeTxt = Div(text="""<p style="font-size:20px;text-align: center"> Solcor operational dashboard """,
@@ -1748,6 +1766,56 @@ def homescreen(firstTime):
 
     lay = layout([[divPicture],[welcomeTxt],[div],[buttonAddNewProject,manageDropDown,buttonSettings],[buttonShowDashboard,inspectdropdown,buttonCreateQuickReport]])
 
+
+    globNewLayout.children = []
+    globNewLayout.children =[lay]
+
+def goToMainScreen():
+    mainscreen(False)
+
+def saveModus():
+    headingTxt = Div(text="""<p style="font-size:20px;text-align: center"> Save modus """,
+            width=1000, height=30)
+    div = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=30)
+
+
+    buttonBack = Button(label="Back")
+    buttonBack.on_click(goToMainScreen)
+
+    resetButton = Button(label="Reset settings")
+    resetButton.on_click(resetSettings)
+
+    resetDBButton = Button(label="Reset Database",button_type="danger")
+    resetDBButton.on_click(confirmDeleteDB)
+
+    reloadDBButton = Button(label="Reload Database",)
+    reloadDBButton.on_click(reloadDBAndReturnToHome)
+
+    lay = layout([[headingTxt],[div],[resetButton],[resetDBButton],[reloadDBButton],[buttonBack]])
+
+    globNewLayout.children = []
+    globNewLayout.children =[lay]
+
+
+
+def mainscreen(firstTime):
+    global globNewLayout
+    divPicture = Div(text="<img src=https://dl.dropboxusercontent.com/s/kv1p5r6hvjpwi4z/Solcor%20logo.jpg?dl=0>")
+
+    welcomeTxt = Div(text="""<p style="font-size:20px;text-align: center"> Solcor operational dashboard """,
+            width=1000, height=30)
+
+    div = Div(text="""<hr noshade size=4 color=green>""",
+        width=1000, height=30)
+
+    buttonEnter = Button(label="Go to dashboard")
+    buttonEnter.on_click(partial(homescreen,True))
+
+    buttonSettings = Button(label="Save modus")
+    buttonSettings.on_click(saveModus)
+
+    lay = layout([[divPicture],[welcomeTxt],[div],[buttonEnter,buttonSettings]])
     if firstTime:
         globNewLayout=lay
         curdoc().add_root(globNewLayout)
@@ -1756,7 +1824,8 @@ def homescreen(firstTime):
         globNewLayout.children =[lay]
 
 
-homescreen(True)
+
+mainscreen(True)
 
 curdoc().title = "Solcor operations"
 

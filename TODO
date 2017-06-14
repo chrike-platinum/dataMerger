@@ -1,7 +1,7 @@
 check sample rate
 possible to change the kw to W
 WeatherCache rewrite, if some days in cache, merge with these.
-
+average cloud data
 
 
 /Users/christiaan/PycharmProjects/dataMerger/SolcorDashboard.py:831: FutureWarning: to_datetime is deprecated. Use self.to_pydatetime()
@@ -14,11 +14,19 @@ check directories with accents
 
 
 
-check for extra files every startup
-
 check input values
 
 make own export formats also readable
 
 connect settings with inside work
+
+Add dates to print
+
+why no kWh if one day is selected
+
+Rain and cloud label not in place if few days are selected
+
+Delete specific data from dataframes
+
+
 

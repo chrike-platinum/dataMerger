@@ -40,9 +40,6 @@ def returnAverageRainData(beginDate,endDat,lat,lng):
     df2.index = pd.to_datetime(df2.index)
     sunUp = '06:00'
     sunDown = '21:00'
-
-
-
     DFList = [group[1] for group in df2.groupby(df2.index.date)]
 
 
@@ -93,12 +90,7 @@ def returnAverageCloudData(beginDate,endDat,lat,lng):
     df2.index = pd.to_datetime(df2.index)
     sunUp = '7:00'
     sunDown = '19:00'
-
-
-
     DFList = [group[1] for group in df2.groupby(df2.index.date)]
-
-
     resultList = []
     for data in DFList:
         newDf = data.between_time(sunUp,sunDown)
@@ -141,26 +133,14 @@ def collectSolarisData(path,year):
 
 
 
-'''
-def reindexforYear(df):
-    df['month'] = pd.to_datetime(df.index.values, format='%Y-%m')
-    df = df.pivot(index='month', columns='Ghd_GHI')
 
-    start_date = df.index.min() - pd.DateOffset(day=1)
-    end_date = df.index.max() + pd.DateOffset(day=31)
-    dates = pd.date_range(start_date, end_date, freq='D')
-    dates.name = 'date'
-    df = df.reindex(dates, method='ffill')
+def updateInverterData(inverter,i):
+    df = inverter.inverterData
+    newDf = DL.fetchFilesforInverter(inverter.filePath,inverter.columnNumber-1,str(inverter.type)+'-'+str(i),inverter.sampleRate)
+    if (not newDf.empty):
+        returndf = newDf.merge(df,left_index=True,right_index=True,how='outer',on=str(inverter.type)+'-'+str(i))
+        print('merging')
+    else:
+        returndf = df
+    return returndf
 
-    #df = df.stack(['Ghd_GHI','Gid_GII','percentageChange','Esd daily','Esd monthly']])
-    df.stack('Ghd_GHI')
-    df = df.sortlevel(level=1)
-    df = df.reset_index()
-    return df
-'''
-
-
-name = 'NDC_PV-8627-1705-1780_-31.783--70.984.xls'
-path='/Users/christiaan/Desktop/Solcor/dataMergeWeek/'
-print(collectSolarisData(path+name,2017))
-#

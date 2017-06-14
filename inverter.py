@@ -5,6 +5,7 @@ import datetime
 from datetime import timedelta, date
 import CalculationEngine as CE
 
+
 class Inverter(object):
 
 
@@ -25,9 +26,14 @@ class Inverter(object):
     def __getitem__(self, item):
         return getattr(self, item)
 
-    def updateInverterData(self,inverterData):
+    def updateInitialInverterData(self,inverterData):
         self.inverterData = inverterData
+        print('initial data',inverterData)
         #TODO add new data to old data
+
+    def updateNextInverterData(self,i):
+        updatedDF = CE.updateInverterData(self,i)
+        self.inverterData=updatedDF
 
     def getInverterDatafromTo(self,beginDate,endDate):
         return self.inverterData[beginDate:endDate]

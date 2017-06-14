@@ -120,6 +120,31 @@ def getAllProjectObjects():
     IDlist = loadIDList()
     projectsList=[]
     for projectTuple in IDlist:
-        projectsList.append(loadProject(projectTuple[0]))
+        try:
+            projectsList.append(loadProject(projectTuple[0]))
+        except:
+            print('projectDB file not found but in IDlist')
     return projectsList
+
+def reloadDB():
+    resetIDList()
+    newID=0
+    filelist = [ f for f in os.listdir(script_dir+'/'+databaseFolder) if (f.endswith(".dat") and f.lower().startswith("projectdb"))]
+    newIDlist=[]
+    for fileName in filelist:
+        try:
+            with open(script_dir+'/'+databaseFolder+fileName,"rb") as f:
+                project = pickle.load(f)
+                project.DBID=newID
+                saveProject(project)
+                newIDlist.append((newID,project.name))
+                newID+=1
+        except:
+            print('Project not found!')
+            raise
+
+    with open(script_dir+'/'+databaseFolder+"ProjectIDList.dat", "wb") as f:
+        pickle.dump(newIDlist, f)
+
+
 

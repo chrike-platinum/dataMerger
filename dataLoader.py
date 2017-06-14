@@ -75,7 +75,10 @@ def importCSVFile(dataPath,fileName,sampleRate2):
     return df
 
 def combineAllData(listOfDataFrames):
-    df = pd.concat(listOfDataFrames)
+    if listOfDataFrames!=[]:
+        df = pd.concat(listOfDataFrames)
+    else:
+        df = pd.DataFrame()
     return df
 
 
@@ -118,13 +121,15 @@ def fetchFilesforInverter(folderPath,colNr,inverterName,sampleRate):
     for i in listofFolders:
         #foldername = os.path.basename(os.path.normpath(i))
         combinedDf =combineAllData(importAllFilesFromFolder(i,sampleRate))
-        combinedDf.index = pd.to_datetime(combinedDf.index)
-        newdf = combinedDf[combinedDf.columns[colNr]].to_frame()
-        newdf.columns = [inverterName]
-        newdf.index=pd.to_datetime(combinedDf.index)
-        dataFramelist.append(newdf)
-
-
+        if not combinedDf.empty:
+            combinedDf.index = pd.to_datetime(combinedDf.index)
+            newdf = combinedDf[combinedDf.columns[colNr]].to_frame()
+            newdf.columns = [inverterName]
+            newdf.index=pd.to_datetime(combinedDf.index)
+            dataFramelist.append(newdf)
+        else:
+            df = pd.DataFrame()
+            dataFramelist.append(df)
 
 
     df = pd.concat(dataFramelist,axis=1,ignore_index=False)
