@@ -250,13 +250,22 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     for inverterName in kWhPerDay.columns.values:
         inverter = project.getInverter(inverterID)
         kWhPerDay2=kWhPerDay[kWhPerDay.columns[inverterID]]/inverter.kWP
+
         color = next(colorPool)
         line = p3.line(x=kWhPerDay2.index.values,y=kWhPerDay2,color=color)
-        plotlines.append(('Inv '+str(inverterID+1),[line]))
+        lines =[line]
+        if (len(kWhPerDay2.index.values)==1):
+            linePoint = p3.circle(x=kWhPerDay2.index.values,y=kWhPerDay2,color=color, size=10)
+            lines.append(linePoint)
+        plotlines.append(('Inv '+str(inverterID+1),lines))
         plotDates = [createReadableDate(date) for date in kWhPerDay2.index.values]
         plotDates = [datetime.datetime.strptime(d,'%d/%m/%Y').date() for d in plotDates]
-        ax.plot(plotDates,kWhPerDay2,label='Inv '+str(inverterID),color=color,linewidth='1')
+        if (len(kWhPerDay2.index.values)==1):
+            ax.plot(plotDates,kWhPerDay2,label='Inv '+str(inverterID),color=color,marker='o',linewidth='1')
+        else:
+            ax.plot(plotDates,kWhPerDay2,label='Inv '+str(inverterID),color=color,linewidth='1')
         inverterID +=1
+
 
     GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
 
@@ -265,9 +274,17 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
     avg = [expDailyAvg]*len(kWhPerDay.index.values)
     avgLine = p3.line(x=kWhPerDay2.index.values,y=avg,color='black')
-    plotlines.append(('Exp. avg.',[avgLine]))
+    avgLines = [avgLine]
+    if len(kWhPerDay2.index.values)==1:
+        kwhLinePoints = p3.circle(x=kWhPerDay2.index.values,y=avg,color='black', size=10)
+        ax.plot(plotDates,avg,label='Exp. avg.',color='black',marker='o',linewidth='1')
+        avgLines.append(kwhLinePoints)
+    else:
+        ax.plot(plotDates,avg,label='Exp. avg.',color='black',linewidth='1')
+    plotlines.append(('Exp. avg.',avgLines))
 
-    ax.plot(plotDates,avg,label='Exp. avg.',color='black',linewidth='1')
+
+
     #ax = plt.subplot(111)
     #ax.grid()
 
@@ -280,6 +297,8 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
     minkWP=min(list)
     dfMaxkWh=(kWhPerDay/minkWP).max().max()
+    dfMaxkWh=max(expDailyAvg,dfMaxkWh)
+
     p3.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
     ax.set_ylim([-0.5, 1.2*dfMaxkWh])
 
@@ -409,14 +428,14 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         colorPool = cycle(lst)
 
         lineLegends=[]
-        inverterID3=1
+
         plotDates = [date for date in df.index.values]
         plotDates = [date for date in plotDates]# if (pd.Timestamp(date).time().strftime('%H:%M:%S')=='00:00:00')]
         plotDates2 = [date for date in plotDates if (pd.Timestamp(date).time().strftime('%H:%M:%S')=='00:00:00')]
         #plotDates = [datetime.datetime.strptime(d,'%d/%m/%Y %H:%m:%S').date() for d in plotDates]
         #plotDates = [createReadableDate(date) for date in plotDates]
 
-
+        inverterID3=0
         for inverter in project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString).columns:
             color = next(colorPool)
             line = p.line(x=df.index.values,y=df[inverter],color=color)
@@ -436,9 +455,10 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
         meansLabel = [str(int(round(100*(x),0)))+'%' for x in cloudData.values.tolist()]
 
-
-        beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(1, 'D')
-
+        if len(cloudDataShiftIndex)>=10:
+            beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(24, 'h')
+        else:
+            beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(12, 'h')
         cloudDataShiftIndex = np.insert(cloudDataShiftIndex,0,beginLabelCloud)
         xcloud = cloudDataShiftIndex
         offset = 0
@@ -466,8 +486,10 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
         rainLabel = [str(int(round(100*(x),0)))+'%' for x in rain.values.tolist()]
 
-
-        beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(1, 'D')
+        if len(rainDataShiftIndex)>=10:
+            beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(24, 'h')
+        else:
+            beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(12, 'h')
         #rainDataShiftIndex = np.insert(rainDataShiftIndex,0,beginLabelRain)
         rainDataShiftIndex = np.r_[beginLabelRain, rainDataShiftIndex]
         offset=0
@@ -625,14 +647,16 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
         #####ADD kWh DATA
 
-
         totalKWhPerday = kWhPerDay.sum(axis=1)
-
-        totalKWhPerday = totalKWhPerday.to_frame()
+        beginDate = totalKWhPerday.index.values[0]
+        endDate = totalKWhPerday.index.values[-1]
+        idx = pd.date_range(beginDate, endDate)
+        totalKWhPerday = totalKWhPerday.to_frame().reindex(idx, fill_value=0)
         totalKWhPerday.columns = ['kWh']
         totalKWhPerday.index = pd.to_datetime(totalKWhPerday.index) #+ pd.DateOffset(hours=12)
         df = totalKWhPerday
         dfMaxkWh=df.max().max()
+
         dfMaxkWhkWP=(df/project.totalkWP).max().max()
         yValues=df[df.columns[0]]
 
@@ -644,9 +668,11 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         plotDates = [datetime.datetime.strptime(d,'%d/%m/%Y').date() for d in plotDates]
 
         kwhLine = p2.line(x=df.index.values,y=yValues,color='blue')
-        ax1.plot(plotDates,yValues,label='kWh',color='blue',linewidth='1')
+        if len(df.index.values)==1:
+            ax1.plot(plotDates,yValues,label='kWh',color='blue',marker='o',linewidth='1')
+        else:
+            ax1.plot(plotDates,yValues,label='kWh',color='blue',linewidth='1')
 
-        lineLegends2.append(('kWh',[kwhLine]))
         p2.yaxis.axis_label_text_color = "blue"
         p2.add_layout(LinearAxis(y_range_name="etxraAxis",axis_label='kWh/kWP',axis_label_text_color='green'), 'right')
 
@@ -660,27 +686,50 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
         GIIdaily=project.getGII(projectDateBeginString,projectDateEndString)
         projectAVG = round(expPR*GIIdaily/100,2)
+        dfMaxkWh=max(projectAVG*project.totalkWP,dfMaxkWh)
+
+        p2.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
+
+
         yvaluesAVG = [projectAVG*project.totalkWP]*len(yValues)
         ExpAvhKwhLine = p2.line(x=df.index.values,y=yvaluesAVG,color='lightblue',line_width=2)
         kwhKWPLIne = p2.line(x=df.index.values,y=yValues/project.totalkWP,color='green',y_range_name="etxraAxis")
 
 
-
-        ax2.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='green',linewidth='1')
-        ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',linewidth='1')
-
-
-        lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine]))
-        lineLegends2.append(('kWh/kWP',[kwhKWPLIne]))
-
-
+        if len(plotDates)==1:
+            ax2.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='green',marker='o',linewidth='1')
+            ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',marker='o',linewidth='1')
+        else:
+            ax2.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='green',linewidth='1')
+            ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',linewidth='1')
 
 
         yValueskWP=[projectAVG]*len(yValues)#[x/project.totalkWP for x in yvaluesAVG]
-        ExpKWhKWP= p2.line(x=df.index.values,y=yValueskWP,y_range_name="etxraAxis",color='lightgreen',line_width=2)
-        ax2.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',linewidth='1')
+        dfMaxkWhkWP=max(dfMaxkWhkWP,projectAVG)
 
-        lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP]))
+        p2.extra_y_ranges = {"etxraAxis": Range1d(start=0, end=2*dfMaxkWhkWP)}
+        ExpKWhKWP= p2.line(x=df.index.values,y=yValueskWP,y_range_name="etxraAxis",color='lightgreen',line_width=2)
+        if(len(plotDates)==1):
+            ax2.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',marker='o',linewidth='1')
+        else:
+            ax2.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',linewidth='1')
+
+
+        if (len(df.index.values)==1):
+            ExpKWhKWPLinePoints = p2.circle(x=df.index.values,y=yValueskWP,y_range_name="etxraAxis",color='lightgreen', size=10)
+            kwhLinePoints = p2.circle(x=df.index.values,y=yValues,color='blue', size=10)
+            ExpAvhKwhLinePoints = p2.circle(x=df.index.values,y=yvaluesAVG,color='lightblue', size=10)
+            kwhKWPLinePoints = p2.circle(x=df.index.values,y=yValues/project.totalkWP,y_range_name="etxraAxis",color='green', size=10)
+
+            lineLegends2.append(('kWh',[kwhLine,kwhLinePoints]))
+            lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine,ExpAvhKwhLinePoints]))
+            lineLegends2.append(('kWh/kWP',[kwhKWPLIne,kwhKWPLinePoints]))
+            lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP,ExpKWhKWPLinePoints]))
+        else:
+            lineLegends2.append(('kWh',[kwhLine]))
+            lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine]))
+            lineLegends2.append(('kWh/kWP',[kwhKWPLIne]))
+            lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP]))
 
 
 
@@ -761,7 +810,10 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 #########INVERTERGRAPH
 
-
+        beginDate = kWhPerDay.index.values[0]
+        endDate = kWhPerDay.index.values[-1]
+        idx = pd.date_range(beginDate, endDate)
+        kWhPerDay = kWhPerDay.reindex(idx, fill_value=0)
 
         inverterGraphs =[]
         inverterGraphs.append(createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndString))

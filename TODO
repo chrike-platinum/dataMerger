@@ -18,15 +18,13 @@ check input values
 
 make own export formats also readable
 
-connect settings with inside work
-
 Add dates to print
-
-why no kWh if one day is selected
 
 Rain and cloud label not in place if few days are selected
 
 Delete specific data from dataframes
+
+html files location settings
 
 
 
