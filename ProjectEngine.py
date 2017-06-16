@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __author__ = 'christiaan'
 
 from project import Project
@@ -25,9 +26,14 @@ def checkForDataUpdates(project):
 def updateAllProjects():
     projectList = DH.getAllSavedProjects()
     for project in projectList:
-        checkForDataUpdates(project)
-        #time.sleep(1)
-        DH.saveProject(project)
+        try:
+            print('updating: '+str(project.name))
+            checkForDataUpdates(project)
+            #time.sleep(1)
+            DH.saveProject(project)
+        except:
+            print('Could not update '+str(project.name)+'. 1) Check directory name 2) only .csv production files are allowed in the directory')
+
 
 
 

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 __author__ = 'christiaan'
 import pandas as pd
 from os import listdir
@@ -6,18 +8,17 @@ import re
 import matplotlib.pyplot as plt
 import os
 import glob
+from cStringIO import StringIO
+import datetime
 
-DirPath= '/Users/christiaan/Desktop/Solcor/dataMergeProject/'
-
-DirPath2= '/Users/christiaan/Desktop/Solcor/dataMergeProject/Puratos/'
 
 
 
 def searchStartingRowCSV(dataPath,fileName):
     if (dataPath.strip()[-1] =='/'):
-        df = pd.read_csv(dataPath+fileName, sep=';', encoding='latin1', parse_dates=False,index_col=0,header=None)
+        df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(dataPath+'/'+fileName))), sep=';', encoding='latin1', parse_dates=False,index_col=0,header=None)
     else:
-        df = pd.read_csv(dataPath+'/'+fileName, sep=';', encoding='latin1', parse_dates=False,index_col=0,header=None)
+        df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(dataPath+'/'+fileName))), sep=';', encoding='latin1', parse_dates=False,index_col=0,header=None)
     df=df.dropna(axis=1,how='all')
     inverterName = None
     if 'filetype' in str(df.index.values[0]).lower():
@@ -40,14 +41,26 @@ def importCSVFile(dataPath,fileName,sampleRate2):
     sampleRate = str(sampleRate2)
     start,dateIncluded,inverterName = searchStartingRowCSV(dataPath,fileName)
 
-    df = pd.read_csv(dataPath+'/'+fileName, sep=';', encoding='latin1', parse_dates=True,index_col=0,skiprows=start)
+    df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(dataPath+'/'+fileName))), sep=';', encoding='latin1', parse_dates=True,index_col=0,skiprows=start)
     df=df.dropna(axis=1,how='all')
     ###Extend short dataframes
-    dateDF = str(df.index.values[0])[:10]
+    dateDF = str(df.index.values[1])[:10]
+    if ('.' in str(df.index.values[1])[:10]):
+        dateparse = lambda x: pd.datetime.strptime(x, '%d.%m.%Y %H:%M')
+        df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(dataPath+'/'+fileName))), sep=';', encoding='latin1',date_parser=dateparse, parse_dates=True,index_col=0,skiprows=start+1)
+        df = df.apply(pd.to_numeric, args=('coerce',))
+        df=df.dropna(axis=1,how='all')
+        dateDF = str(df.index.values[1])[:10].replace('.','-')
+
+
+
     print(str(fileName)+' busy...')
     if dateIncluded:
+        print('Date included')
         ix = pd.DatetimeIndex(start=dateDF+" 00:00:00", end=dateDF+" 23:45:00", freq=sampleRate)
+        print('ix',ix)
         df = df.resample(sampleRate).mean().ffill().reindex(ix).fillna(0)
+        print('NEwestDF',df)
     else:
         try:
             date = re.search("([0-9]{4}\-[0-9]{2}\-[0-9]{2})", fileName).group(1)
@@ -171,6 +184,7 @@ def getIndexOfFirstOccurance(df,searchString):
 def collectSolargisData(filePath):
     endColumn=5
     endRow = 12
+    filePath=filePath.decode('utf8')
     df_GHI = pd.read_excel(filePath, sheetname="GHI+Temp")
     skips = getIndexOfFirstOccurance(df_GHI,'Month')
     df_GHI = pd.read_excel(filePath, sheetname="GHI+Temp",skiprows=skips+1)
@@ -193,7 +207,3 @@ def collectSolargisData(filePath):
     df_PV = df_PV[df_PV.columns[0:endColumn+1]].head(n=endRow)
     return df_GHI,df_GII,df_PV
 
-name = 'NDC_PV-8627-1705-1780_-31.783--70.984.xls'
-path='/Users/christiaan/Desktop/Solcor/dataMergeWeek/'
-
-collectSolargisData(path+name)

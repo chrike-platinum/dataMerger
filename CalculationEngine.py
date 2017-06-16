@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __author__ = 'christiaan'
 
 from scipy.integrate import simps
@@ -139,7 +140,6 @@ def updateInverterData(inverter,i):
     newDf = DL.fetchFilesforInverter(inverter.filePath,inverter.columnNumber-1,str(inverter.type)+'-'+str(i),inverter.sampleRate)
     if (not newDf.empty):
         returndf = newDf.merge(df,left_index=True,right_index=True,how='outer',on=str(inverter.type)+'-'+str(i))
-        print('merging')
     else:
         returndf = df
     return returndf

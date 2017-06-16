@@ -1,4 +1,3 @@
-check sample rate
 possible to change the kw to W
 WeatherCache rewrite, if some days in cache, merge with these.
 average cloud data
@@ -12,19 +11,20 @@ average cloud data
 
 
 
-check directories with accents
-
 Delete specific data from dataframes
-
-Check input values
 
 make own export formats also readable
 
-Check comment prints on pdf
 
 Check back button create quick report on main screen
 
+(Check input values)
 
+Change forecast API
+
+clear status field
+
+Check reload database after deleting a project
 
 
 

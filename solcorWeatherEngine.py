@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __author__ = 'christiaanleysen'
 
 import forecastio
@@ -28,17 +29,23 @@ for hourlyData in forecast.hourly().data:
 '''
 
 def requestCloudDataFile(startDate,endDate,lat,lng):
+    print('Collecting weather data...')
+    print('startDate',startDate)
+    print('endDate',endDate)
     startDate = pd.to_datetime(startDate)
     endDate = pd.to_datetime(endDate)
     cachedfile = cached(startDate,endDate,lat,lng)
+
     fileName = cachedfile
     if cachedfile==None:
+        print('Weather data not in cache')
         days = [startDate + datetime.timedelta(days=x) for x in range((endDate-startDate).days + 1)]
         data = []
         for day in days:
             forecast = forecastio.load_forecast(api_key, lat, lng,time=day)
-            print('sunRise',forecast.daily().data[0].sunriseTime+ datetime.timedelta(hours=UTCTimeOfset))
-            print('sunSet',forecast.daily().data[0].sunsetTime+ datetime.timedelta(hours=UTCTimeOfset))
+            print('Collecting weather data of '+str(day))
+            #print('sunRise',forecast.daily().data[0].sunriseTime+ datetime.timedelta(hours=UTCTimeOfset))
+            #print('sunSet',forecast.daily().data[0].sunsetTime+ datetime.timedelta(hours=UTCTimeOfset))
             generalCloudIndex=-1
             try:
                 generalCloudIndex=forecast.daily().data[0].cloudCover
@@ -79,23 +86,30 @@ def requestCloudDataFile(startDate,endDate,lat,lng):
                 data.append((pd.to_datetime(weatherData.time + datetime.timedelta(hours=UTCTimeOfset)),cloudcover,weatherSummary,precipIntensitivity,precipProb,visibility,temp,generalCloudIndex))
 
 
-        print (list(data))
+
         df = pd.DataFrame(list(data),columns=['time','cloudIndex','summary','precipIntensity','precipProb','visibility','temp','generalCloudIndex'])
         df = df.set_index('time')
-        fileName=str(startDate)+' '+str(endDate)+' '+str(lat)+str(lng)
-        df.to_csv('weatherDataCache/'+fileName, sep='\t')
-    print('result',fileName)
+        startDateString= str(startDate).replace(':',';')
+        endDateString=str(endDate).replace(':',';')
+        fileName=startDateString+' '+endDateString+' '+str(lat)+str(lng)
+        print('Saving weather data...')
+        df.to_csv('weatherDataCache/'+fileName, sep='\t',)
+        print('Weather data collected!')
     return fileName
 
 
 
 def cached(startDate,endDate,lat,lng):
-    fName = str(startDate)+' '+str(endDate)+' '+str(lat)+str(lng)
+    startDateString= str(startDate).replace(':',';')
+    endDateString=str(endDate).replace(':',';')
+    fName=startDateString+' '+endDateString+' '+str(lat)+str(lng)
+
 
     if os.path.isfile(fName):
+        print('Is in file')
         return fName
 
-    fileList = os.listdir('weatherDataCache/')
+    fileList = os.listdir("weatherDataCache/")
     possibleFiles = []
     for file in fileList:
         if str(lat)+str(lng) in file:
@@ -104,14 +118,12 @@ def cached(startDate,endDate,lat,lng):
 
     endList=[]
     for posFile in possibleFiles:
-        startDateFile = pd.to_datetime(posFile.split(' ')[0]+' '+posFile.split(' ')[1])
-        #print('string',posFile.split(' ')[0])
-        endDateFile = pd.to_datetime(posFile.split(' ')[2]+' '+posFile.split(' ')[3])
+        startDateFile = pd.to_datetime(posFile.split(' ')[0]+' '+posFile.split(' ')[1].replace(';',':'))
+        endDateFile = pd.to_datetime(posFile.split(' ')[2]+' '+posFile.split(' ')[3].replace(';',':'))
         startDate=pd.to_datetime(startDate)
         endDate=pd.to_datetime(endDate)
 
-       # print('start',startDateFile)
-       # print('end',endDateFile)
+
         if (startDateFile <= startDate) and (endDateFile >= endDate):
             endList.append(posFile)
 

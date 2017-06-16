@@ -4,6 +4,7 @@ from project import Project
 import os
 databaseFolder="Database/"
 script_dir = os.path.dirname(__file__)
+import time
 
 def resetProgramSettings():
     dict = {'HTML-output directory':'','PDF-output directory': '', 'Percentage rainy day': 20, 'Percentage cloudy day': 20}
@@ -107,6 +108,7 @@ def deleteProject(project):
         if f == 'projectDB'+str(project.DBID)+'.dat':
             os.remove(script_dir+"/"+databaseFolder+"/"+f)
             removeProjectFromIDList(project)
+        time.sleep(0.5)
 
 
 def resetDB():
@@ -126,25 +128,67 @@ def getAllProjectObjects():
             print('projectDB file not found but in IDlist')
     return projectsList
 
+
+def saveTempProject(project):
+        projectID=project.DBID
+        project.setDBID(projectID)
+        with open(script_dir+'/'+databaseFolder+"temp_projectDB"+str(projectID)+".dat", "wb") as f:
+                pickle.dump(project, f)
+        updateIDList(projectID,project.name)
+        print('Project data saved!')
+
+def saveResetProject(project):
+        projectID=project.DBID
+        project.setDBID(projectID)
+        with open(script_dir+'/'+databaseFolder+"projectDB"+str(projectID)+".dat", "wb") as f:
+                pickle.dump(project, f)
+        updateIDList(projectID,project.name)
+        print('Project data saved!')
+
+
+
+
+
 def reloadDB():
     resetIDList()
-    newID=0
     filelist = [ f for f in os.listdir(script_dir+'/'+databaseFolder) if (f.endswith(".dat") and f.lower().startswith("projectdb"))]
-    newIDlist=[]
+    print('fileLIst',filelist)
+
+    newID=0
     for fileName in filelist:
+        print(fileName)
         try:
             with open(script_dir+'/'+databaseFolder+fileName,"rb") as f:
                 project = pickle.load(f)
+                print('loaded',project.name)
                 project.DBID=newID
-                saveProject(project)
-                newIDlist.append((newID,project.name))
+                saveTempProject(project)
                 newID+=1
+                #newIDlist.append((newID,project.name))
         except:
             print('Project not found!')
             raise
+    filelist = [ f for f in os.listdir(script_dir+'/'+databaseFolder) if (f.endswith(".dat") and f.lower().startswith("projectdb"))]
+    for fileName in filelist:
+        os.remove(script_dir+"/"+databaseFolder+"/"+fileName)
+
+    newIDlist=[]
+    filelist = [ f for f in os.listdir(script_dir+'/'+databaseFolder) if (f.endswith(".dat") and f.lower().startswith("temp_projectdb"))]
+    for fileName in filelist:
+         try:
+            with open(script_dir+'/'+databaseFolder+fileName,"rb") as f:
+                project = pickle.load(f)
+                print('loaded',project.name)
+                saveResetProject(project)
+                newIDlist.append((project.DBID,project.name))
+         except:
+            print('tempProject not found!')
+            raise
+    for fileName in filelist:
+        os.remove(script_dir+"/"+databaseFolder+"/"+fileName)
+
 
     with open(script_dir+'/'+databaseFolder+"ProjectIDList.dat", "wb") as f:
         pickle.dump(newIDlist, f)
-
 
 

@@ -52,7 +52,10 @@ class Project(object):
             inverterID+=1
 
         self.cleaningDates=maintanceData[0]
-        self.commentList = [ExtraData]
+        if ExtraData ==[]:
+            self.commentList = []
+        else:
+            self.commentList = [ExtraData]
 
         self.gridProblemData=maintanceData[1]
         self.maintenanceData = maintanceData[2]
