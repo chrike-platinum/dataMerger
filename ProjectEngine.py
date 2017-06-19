@@ -30,6 +30,7 @@ def updateAllProjects():
             print('updating: '+str(project.name))
             checkForDataUpdates(project)
             #time.sleep(1)
+            print("uit check for updates")
             DH.saveProject(project)
         except:
             print('Could not update '+str(project.name)+'. 1) Check directory name 2) only .csv production files are allowed in the directory')

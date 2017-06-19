@@ -387,7 +387,7 @@ def handlemakePDF(reportNumberText,divPDF,project,projectDateBeginString,project
 
     divPDF.text ="""<p style="font-size:28px ;text-align: center">Creating PDF..."""
     #PM.makePDFReport(project,projectDateBeginString,projectDateEndString,isTechReport,reportNumber,tempPlotDir,outputDirectory)
-    PM.testPDF2(tempPlotDir,project,reportNumber2,projectDateBeginString,projectDateEndString,printObject,isTechReportRequest=isTechReport)
+    PM.makePDF(tempPlotDir,project,reportNumber2,projectDateBeginString,projectDateEndString,printObject,isTechReportRequest=isTechReport)
     divPDF.text ="""<p style="font-size:28px ;text-align: center">PDF created!"""
 
 def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir):
@@ -857,7 +857,8 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
             htmlFileLocation= DH.getSettings()['HTML-output directory']
 
             #TODO
-            BIO.output_file(filename=htmlFileLocation+'/'+project.name+' '+projectDateBeginString+' '+projectDateEndString+'.html',mode='inline')
+            fileName = os.path.join(str(htmlFileLocation), project.name+' '+projectDateBeginString+' '+projectDateEndString+'.html')
+            BIO.output_file(filename=fileName,mode='inline')
             file = BIO.save(curdoc())
             print('HTML file saved at:',file)
 
@@ -1328,7 +1329,10 @@ def addComment(project):
 def export(project):
     outputDir = str(outputDirectory.value)
     format = str(formatSelection.value)
-    fileName=str(outputDir+'/'+str(project.name)+' consumption'+format)
+
+    fileName = os.path.join(str(outputDir), str(project.name)+' consumption'+str(format))
+
+    #fileName=str(outputDir+'/'+str(project.name)+' consumption'+format)
     df = project.getAllInverterData()
     df.index.name = 'Timestamp'
     df.to_csv(fileName, sep=';')
@@ -1342,7 +1346,10 @@ def export(project):
 def exportCond(project):
     outputDir = str(outputDirectoryCond.value)
     format = str(formatSelectionCond.value)
-    fileName=str(outputDir+'/'+str(project.name)+' condition'+format)
+    #fileName=str(outputDir+'/'+str(project.name)+' condition'+format)
+
+    fileName = os.path.join(str(outputDir), str(project.name)+' condition'+str(format))
+
     GHIdf=project.GHIdf
     GHIdf=GHIdf.groupby(pd.TimeGrouper(freq='M')).mean().round(2)
     GHIdf.index = GHIdf.index.strftime('%m-%Y')

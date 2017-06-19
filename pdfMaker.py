@@ -7,6 +7,7 @@ import datetime
 import pandas as pd
 import re
 import dataHandler as DH
+import os
 
 
 
@@ -34,69 +35,6 @@ def addPageNumber(canvas, doc):
     canvas.drawRightString(200*mm, 20*mm, text)
 
 
-def makePDFReport(project,projectDateBeginString,projectDateEndString,True,reportNumber,tempPlotDir,outputDir):
-
-    todayString = datetime.date.today().strftime("%B %d, %Y")
-    doc = SimpleDocTemplate('test.pdf', pagesize = A4, title = 'Solcor injection rate Report ', author ='christiaan' )
-    frameL = Frame(doc.leftMargin, doc.bottomMargin, doc.width/2-6, doc.height-4*cm, id='col1')
-    frameR = Frame(doc.leftMargin+doc.width/2+6, doc.bottomMargin, doc.width/2-6,
-               doc.height, id='col2')
-    #doc.addPageTemplates([PageTemplate(id='TwoCol',frames=[frame1,frame2])])
-    frame =  Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normalFrame')
-
-    print('Creating PDF...')
-
-    c  = Canvas('mydoc.pdf')
-
-    styles = getSampleStyleSheet()
-    styleNormal = styles['Normal']
-    styleHeading = styles['Heading1']
-    styleHeading.alignment = 1 # centre text (TA_CENTRE)
-
-
-    story = []
-
-
-
-
-    # Text is added using the Paragraph class
-    story.append(Spacer(inch, -1*inch))
-    bannerFrame = Frame(0.5*cm, doc.topMargin, 20*cm, 4.1*cm, id='normal')
-    bannerFrame.addFromList([Image('SolcorBanner.png',20*cm, 4*cm)],c)
-    print('banner added...')
-
-    story1=[]
-    story1.append(Paragraph(project.contactPerson, styleNormal))
-    story1.append(Paragraph(project.name, styleNormal))
-    story1.append(Paragraph(project.street, styleNormal))
-    story1.append(Paragraph(project.city, styleNormal))
-    story1.append(Paragraph(project.telephoneNumber, styleNormal))
-    story1.append(Paragraph('Report: '+reportNumber,styleNormal))
-    frameL.addFromList(story1,c)
-    print('client info added...')
-
-    '''
-    story.append(Spacer(inch, .05*inch))
-
-    story.append(Paragraph('<font color=rgb(73,75,88) size="20"><u> PV performance report</u></font>', styleHeading))
-    story.append(Spacer(inch, .2*inch))
-    story.append(Paragraph('<font color=rgb(73,75,88)><u>Site information</u></font>', styleHeading))
-
-    story.append(Paragraph('longitude/latitude: '+str(project.projectLongitude)+'° / '+str(project.projectLatitude)+'°', styleNormal))
-    story.append(Paragraph('Orientation/Inclination: '+str(project.projectOrientation)+'° / '+str(project.projectInclination)+'°', styleNormal))
-    story.append(Paragraph('Orientation/Inclination: '+str(project.projectOrientation)+'° / '+str(project.projectInclination)+'°', styleNormal))
-
-    print(tempPlotDir+'plot3.png')
-    story.append(Image(tempPlotDir+'plot3.png',20*cm, 4*cm))
-
-    frame.addFromList(story,c)
-    '''
-    c.save()
-    #story.append(NextPageTemplate('TwoCol'))
-    #story.append(Paragraph("Frame two columns,  "*20,styles['Normal']))
-
-
-    #doc.build(story, onFirstPage=addPageNumber, onLaterPages=addPageNumber)
 
 
 def coord(doc, x, y, unit=1):
@@ -390,7 +328,7 @@ def testPDF(tempPlotDir,isTechReportRequest=True):
 
 
 
-def testPDF2(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechReportRequest=True):
+def makePDF(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechReportRequest=True):
     outputLocation = DH.getSettings()['PDF-output directory']
     if outputLocation != '':
         outputLocation=outputLocation+'/'
@@ -409,7 +347,8 @@ def testPDF2(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechRe
     pdfName = 'Solcor PV performance analysis '+str(project.name)+' '+str(beginDate)+' '+str(endDate)+'.pdf'
     if isTechReportRequest:
         pdfName = 'Solcor PV performance analysis '+str(project.name)+' '+str(beginDate)+' '+str(endDate)+' (technical report)'+'.pdf'
-    c  = Canvas(str(outputLocation)+pdfName)
+    c = Canvas(os.path.join(str(outputLocation),pdfName))
+    #c  = Canvas(str(outputLocation)+pdfName)
 
     styles = getSampleStyleSheet()
     styleNormal = styles['Normal']

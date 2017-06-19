@@ -63,7 +63,6 @@ def getkWhPerDay(dataList,sampleRates):
     DFList = [group[1] for group in dataList[1].groupby(dataList[1].index.date)]
     resultList = []
     dates=[]
-    print('DFList----',DFList)
     print('sampleRates',sampleRates)
     for dat in DFList:
             dates.append(dat.index.values[0])

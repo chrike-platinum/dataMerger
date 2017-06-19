@@ -28,8 +28,7 @@ class Inverter(object):
 
     def updateInitialInverterData(self,inverterData):
         self.inverterData = inverterData
-        print('initial data',inverterData)
-        #TODO add new data to old data
+
 
     def updateNextInverterData(self,i):
         updatedDF = CE.updateInverterData(self,i)
