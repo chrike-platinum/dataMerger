@@ -24,7 +24,9 @@ Change forecast API
 
 clear status field
 
-Check reload database after deleting a project
+make all fields empty
+
+explain GMT function in report
 
 
 

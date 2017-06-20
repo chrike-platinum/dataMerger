@@ -146,24 +146,8 @@ def fetchFilesforInverter(folderPath,colNr,inverterName,sampleRate):
 
 
     df = pd.concat(dataFramelist,axis=1,ignore_index=False)
-    #df.index = pd.to_datetime(df.index)
-    result = df
     return df
 
-
-
-
-dataFileName1 = 'Ingeteam 33TL Puratos Inv 1.csv'
-dataFileName2 = 'Ingeteam 33TL Puratos Inv 2.csv'
-dataFileName3 = 'Ingeteam 33TLM Puratos Inv 3.csv'
-dataFileName4 = 'SMA 25000TL30 Gabriel Varela.csv'
-dataFileName5 = 'SMA 25000TL30-20000TL30 NDC.csv'
-datFileDate = '16-02-2014 jlasdkljlsj.csv'
-dataFileName10 = 'Inverter_Day_2017-05-01.csv'
-newPath = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Nueces del Choapa'
-newPath2 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/gabriel Varela'
-newPath3 = '/Users/christiaan/Desktop/Solcor/dataMergeWeek/Puratos'
-dataFileName11='170503_003.csv'
 
 
 
@@ -171,8 +155,6 @@ dataFileName11='170503_003.csv'
 def SelectTimeFrameData(timeseries,beginDate,endDate):
     print("Selecting time period...")
     df = timeseries[beginDate:endDate]
-    #mask = is_leap_and_29Feb(df)
-    #f = df.loc[~mask]
     return df
 
 
@@ -188,7 +170,6 @@ def collectSolargisData(filePath):
     df_GHI = pd.read_excel(filePath, sheetname="GHI+Temp")
     skips = getIndexOfFirstOccurance(df_GHI,'Month')
     df_GHI = pd.read_excel(filePath, sheetname="GHI+Temp",skiprows=skips+1)
-    #df_GHIYear = df_GHI[df_GHI.columns[2]][endRow]
     df_GHI = df_GHI[df_GHI.columns[0:endColumn]].head(n=endRow)
 
 

@@ -65,6 +65,8 @@ class Project(object):
         self.GHIdf=GHIdf
         self.DBID=None
         self.solargisFileLocation=solargisFileLocation
+        self.realGHI=[]
+        self.realGII=[]
 
 
     def __getitem__(self, item):
@@ -101,8 +103,6 @@ class Project(object):
         for invertertuple in self.inverters:
             listOfDF.append(invertertuple[1].inverterData)
         df = pd.concat(listOfDF,axis=1,ignore_index=False)
-        print('df',projectDateBeginString)
-        print('dfPart',df[projectDateBeginString:projectDateEndString])
         return df[projectDateBeginString:projectDateEndString]
 
     def getAllInverterData(self):
@@ -124,10 +124,11 @@ class Project(object):
         return df[df.columns[0]][beginDate:endDate].mean()
 
     def getGII(self,begindateString,enddateString):
-        beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
-        endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
-        df = self.GHIdf
-        return df[df.columns[1]][beginDate:endDate].mean()
+            beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
+            endDate = datetime.datetime.strptime(enddateString,'%Y-%m-%d %H:%M:%S')
+            df = self.GHIdf
+            return df[df.columns[1]][beginDate:endDate].mean()
+
 
     def getPercentageChange(self,begindateString,enddateString):
         beginDate = datetime.datetime.strptime(begindateString,'%Y-%m-%d %H:%M:%S')
@@ -166,10 +167,20 @@ class Project(object):
             returndf = newGHIdf.merge(df,right_index=True,left_index=True,how='outer',on=list(df))
         else:
             returndf=df
-        print('return',returndf)
         self.GHIdf=returndf
 
 
+    def getRealGHI(self,beginDate,endDate):
+        df =CE.getRealGHIData(str(self.projectLatitude),str(self.projectLongitude),str(beginDate),str(endDate),str(self.name),str(self.name).replace(" ", "")[0:4],['GHI'],'HOURLY','false')
+        df = df.resample('D').sum()
+        self.realGHI =df
+        return self.realGHI
+
+    def getRealGII(self,beginDate,endDate):
+        percentage = self.getPercentageChange(beginDate,endDate)
+        realGII=(percentage)*self.getRealGHI(beginDate,endDate)
+        self.realGII = realGII
+        return realGII
 
 
 

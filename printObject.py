@@ -30,6 +30,8 @@ class PrintObject(object):
         self.invertersRealDailyAvgKWP=[]
         self.invertersExpDailyAvgKWP=[]
 
+        self.realDataBoolean=-1
+
 
 
 

@@ -400,6 +400,7 @@ def makePDF(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechRep
     story2.append(Paragraph('longitude/latitude: '+str(project.projectLongitudeString)+" / "+str(project.projectLatitudeString),styleNormal))
     story2.append(Paragraph('Orientation/Inclination: '+str(project.projectOrientation)+'° / '+str(project.projectInclination)+'°',styleNormal))
     story2.append(Paragraph('Structure: '+ str(project.structureType),styleNormal))
+    story2.append(Paragraph('Real-time data used: '+ str(printObject.realDataBoolean),styleNormal))
     for inveterTuple in project.inverters[0:5]:
         story2.append(Paragraph('inverter '+str(inveterTuple[0]+1)+': '+inveterTuple[1].type+' / '+str(inveterTuple[1].kWP)+' kWP' ,styleNormal))
     frameR.addFromList(story2,c)
@@ -588,6 +589,6 @@ def makePDF(tempPlotDir,project,reportNr,beginDate,endDate,printObject,isTechRep
     print('saving PDF...')
     c.save()
     print('PDF: '+pdfName+' saved!')
-    print('Location: '+str(outputLocation))
+    print('Location: '+str(os.path.join(str(outputLocation))))
 
 

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 __author__ = 'christiaan'
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 from scipy.integrate import simps
 import solcorWeatherEngine as SWE
@@ -59,21 +62,23 @@ def returnAverageRainData(beginDate,endDat,lat,lng):
 
 
 def getkWhPerDay(dataList,sampleRates):
-    dataList[1].index = pd.to_datetime(dataList[1].index)
-    DFList = [group[1] for group in dataList[1].groupby(dataList[1].index.date)]
-    resultList = []
-    dates=[]
-    print('sampleRates',sampleRates)
-    for dat in DFList:
-            dates.append(dat.index.values[0])
-            dat.index = [pd.Timestamp(d) for d in dat.index]
-            #freq = pd.infer_freq(dat.index)
-            kWh = calculateTotalAreaVector(dat,sampleRates)
-            resultList.append(kWh)
-    result = resultList#[list(i) for i in zip(*resultList)]
+    try:
+        dataList[1].index = pd.to_datetime(dataList[1].index)
+        DFList = [group[1] for group in dataList[1].groupby(dataList[1].index.date)]
+        resultList = []
+        dates=[]
+        for dat in DFList:
+                dates.append(dat.index.values[0])
+                dat.index = [pd.Timestamp(d) for d in dat.index]
+                #freq = pd.infer_freq(dat.index)
+                kWh = calculateTotalAreaVector(dat,sampleRates)
+                resultList.append(kWh)
+        result = resultList#[list(i) for i in zip(*resultList)]
 
-    df = pd.DataFrame(result,index=dates,columns=DFList[0].columns)
-    return df
+        df = pd.DataFrame(result,index=dates,columns=DFList[0].columns)
+        return df
+    except:
+                    print("No data found in the folder!")
 
 def getTotalkWh(dataList,sampleRates):
     df = getkWhPerDay(dataList,sampleRates)
@@ -143,3 +148,9 @@ def updateInverterData(inverter,i):
         returndf = df
     return returndf
 
+def getRealGHIData(lat,lon,beginDate,EndDate,siteName,id,listOfRequests,samplerate,terrainShading):
+        dfString = SWE.requestRealGHIdata(lat,lon,beginDate,EndDate,siteName,id,listOfRequests,samplerate,terrainShading)
+        df = dfString.convert_objects(convert_numeric=True)
+        df=df/1000 #convert Watthour to kiloWatthour
+        df.columns = ['GHI']
+        return df

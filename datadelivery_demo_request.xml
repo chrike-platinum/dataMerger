@@ -1,14 +1,14 @@
-<ws:dataDeliveryRequest dateFrom="2014-04-28" dateTo="2014-04-28"
+<ws:dataDeliveryRequest dateFrom="2017-06-01" dateTo="2017-06-04"
     xmlns="http://geomodel.eu/schema/data/request"
     xmlns:ws="http://geomodel.eu/schema/ws/data"
     xmlns:geo="http://geomodel.eu/schema/common/geo"
     xmlns:pv="http://geomodel.eu/schema/common/pv"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
-    <site id="demo_site" name="Demo site" lat="48.61259" lng="20.827079">
-        <geo:terrain elevation="246" azimuth="176" tilt="3.1"/>
-        <pv:geometry xsi:type="pv:GeometryFixedOneAngle" azimuth="180" tilt="30"/>
-        <pv:system installedPower="10" installationType="FREE_STANDING" dateStartup="2013-10-10">
+    <site id="demo_site" name="Demo site" lat="-31.78306" lng="-70.98417">
+        <geo:terrain elevation="26" azimuth="176" tilt="30.1"/>
+        <pv:geometry xsi:type="pv:GeometryFixedOneAngle" azimuth="100" tilt="30"/>
+        <pv:system installedPower="100" installationType="FREE_STANDING" dateStartup="2013-10-10">
             <pv:module type="CSI">
                 <pv:degradation>0.5</pv:degradation>
                 <pv:degradationFirstYear>0.8</pv:degradationFirstYear>
@@ -16,15 +16,15 @@
                 <pv:PmaxCoeff>-0.469</pv:PmaxCoeff>
             </pv:module>
             <pv:inverter>
-                <pv:efficiency xsi:type="pv:EfficiencyConstant" percent="95"/>
+                <pv:efficiency xsi:type="pv:EfficiencyConstant" percent="80"/>
             </pv:inverter>
             <pv:losses>
                 <pv:acLosses cables="1" transformer="1"/>
-                <pv:dcLosses cables="1" mismatch="1" snowPollution="2.5"/>
+                <pv:dcLosses cables="1" mismatch="1" snowPollution="1"/>
             </pv:losses>
         </pv:system>
     </site>
-    <processing key="GHI DIF DNI GTI TEMP WS RH PVOUT" summarization="HOURLY" terrainShading="true">
-	<timeZone>GMT+02</timeZone>
+    <processing key="GHI" summarization="HOURLY" terrainShading="true">
+	<timeZone>GMT-04</timeZone>
     </processing>
 </ws:dataDeliveryRequest>

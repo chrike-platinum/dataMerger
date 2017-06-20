@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'christiaanleysen'
+api_key = "0c1002aa0ed71bb35f6327df16d9a611"
+
 
 import forecastio
 import datetime
@@ -7,6 +9,7 @@ import pandas as pd
 import os.path
 import time
 import pytz
+import solargisClient as SC
 
 
 UTCTimeOfset=-3
@@ -15,18 +18,7 @@ UTCTimeOfset=-3
 chileTimeZone = pytz.timezone('Chile/Continental')
 
 
-api_key = "1a11c955c4f85429032538cd11a02bfa"
-lat = -33.447487
-lng = -70.673676
-#dateRequested = datetime.datetime(2017, 5, 17, 0, 0)
 
-'''
-forecast = forecastio.load_forecast(api_key, lat, lng,time=dateRequested)
-
-
-for hourlyData in forecast.hourly().data:
-        print (hourlyData.cloudCover,hourlyData.time)
-'''
 
 def requestCloudDataFile(startDate,endDate,lat,lng):
     print('Collecting weather data...')
@@ -36,7 +28,7 @@ def requestCloudDataFile(startDate,endDate,lat,lng):
     endDate = pd.to_datetime(endDate)
     cachedfile = cached(startDate,endDate,lat,lng)
 
-    fileName = cachedfile
+
     if cachedfile==None:
         print('Weather data not in cache')
         days = [startDate + datetime.timedelta(days=x) for x in range((endDate-startDate).days + 1)]
@@ -92,9 +84,12 @@ def requestCloudDataFile(startDate,endDate,lat,lng):
         startDateString= str(startDate).replace(':',';')
         endDateString=str(endDate).replace(':',';')
         fileName=startDateString+' '+endDateString+' '+str(lat)+str(lng)
-        print('Saving weather data...')
-        df.to_csv('weatherDataCache/'+fileName, sep='\t',)
+        fileName = os.path.join("weatherDataCache/",fileName)
+        print('Saving weather data at'+fileName+' ...')
+        df.to_csv(fileName, sep='\t',)
         print('Weather data collected!')
+    else:
+        fileName = "weatherDataCache/"+cachedfile
     return fileName
 
 
@@ -135,16 +130,27 @@ def cached(startDate,endDate,lat,lng):
 
 def requestWeatherData(startDate,endDate,lat,lng):
     fileName = requestCloudDataFile(startDate,endDate,lat,lng)
-    dataframe = pd.read_csv('weatherDataCache/'+fileName,sep='\t',index_col='time')
+    fileName = os.path.join(fileName)
+    print('READ',fileName)
+    dataframe = pd.read_csv(fileName,sep='\t',index_col='time')
     dataframe = dataframe[startDate:endDate]
     return dataframe
 
 
-#d1 = "2017-05-29 00:00:00"
-#d2 = "2017-05-30 00:00:00"
-#print(requestCloudData(d1,d2,-33.447487,-70.673676))
+
+
+def requestRealGHIdata(lat,lon,beginDate,endDate,siteName,id,listOfRequests,samplerate,terrainShading):
+    df = SC.requestSolargisData(lat,lon,beginDate[0:10],endDate[0:10],siteName,id,listOfRequests,samplerate,terrainShading)
+    df.index = pd.to_datetime(df.index)
+    beginDate = datetime.datetime.strptime(beginDate,'%Y-%m-%d %H:%M:%S')
+    endDate = datetime.datetime.strptime(endDate,'%Y-%m-%d %H:%M:%S')
+    return df['GHI'][beginDate:endDate]
+
+
+
 
 '''
+Data that can be requested by dark sky API:
         "time": 255589200,
         "summary": "Mostly Cloudy",
         "icon": "partly-cloudy-night",
