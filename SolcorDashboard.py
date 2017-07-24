@@ -59,6 +59,8 @@ from inverter import Inverter
 import os
 from bokeh.models.widgets import Toggle
 
+
+
 printObject = PrintObject()
 
 #curdoc=curdoc()
@@ -283,20 +285,26 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
     GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
     if (useRealValues==True):
-        GIIdaily=round(project.getRealGII(projectDateBeginString,projectDateEndString).mean(),2)
+        GIIdailyReal = project.getRealGII(projectDateBeginString,projectDateEndString)
+        GIIdaily=round(GIIdailyReal.mean(),2)
+
+
 
     expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
     expDailyAvg=round(expPR*GIIdaily/100,2)
 
     avg = [expDailyAvg]*len(kWhPerDay.index.values)
-    avgLine = p3.line(x=kWhPerDay2.index.values,y=avg,color='black')
+    if (useRealValues==True):
+        avg = GIIdailyReal
+
+    avgLine = p3.line(x=kWhPerDay2.index.values,y=avg,color='black',line_dash='dotted')
     avgLines = [avgLine]
     if len(kWhPerDay2.index.values)==1:
         kwhLinePoints = p3.circle(x=kWhPerDay2.index.values,y=avg,color='black', size=10)
         ax.plot(plotDates,avg,label='Exp. avg.',color='black',marker='o',linewidth='1')
         avgLines.append(kwhLinePoints)
     else:
-        ax.plot(plotDates,avg,label='Exp. avg.',color='black',linewidth='1')
+        ax.plot(plotDates,avg,label='Exp. avg.',color='black',ls=':')
     plotlines.append(('Exp. avg.',avgLines))
 
 
@@ -349,16 +357,14 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     info2div = createInfoTitle('Inverter: overview kWh/kWP')
     inverterID2=0
     inverterLayout = []
+    expDailyAvg=round(expPR*GIIdaily/100,2)
     for inverterName in kWhPerDay.columns.values:
         totalGenerated = kWhPerDay[kWhPerDay.columns[inverterID2]].sum()
         inverter = project.getInverter(inverterID2)
         realDailyAvg=round(totalGenerated/inverter.kWP/len(kWhPerDay.index.values),2)
-        GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
-        if (useRealValues==True):
-            GIIdaily=round(project.getRealGII(projectDateBeginString,projectDateEndString).mean(),2)
-
+        #GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
-        expDailyAvg=round(expPR*GIIdaily/100,2)
+
 
 
         PR=round(realDailyAvg/GIIdaily*100,1)
@@ -482,20 +488,18 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         cloudDataShiftIndex = cloudData.index + pd.DateOffset(hours=12)
 
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
-        meansLabel = [str(int(round(100*(x),0)))+'%' for x in cloudData.values.tolist()]
+        meansLabel = [str(int(round(100*(x),0))) for x in cloudData.values.tolist()]
 
-        if len(cloudDataShiftIndex)>=10:
-            beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(24, 'h')
-        else:
-            beginLabelCloud = cloudDataShiftIndex.values[0] - np.timedelta64(12, 'h')
+
+        beginLabelCloud = cloudDataShiftIndex.values[-1] + np.timedelta64(12, 'h')
         cloudDataShiftIndex = np.insert(cloudDataShiftIndex,0,beginLabelCloud)
         xcloud = cloudDataShiftIndex
         offset = 0
         ycloud= np.append(cloudData*0+1.1*dfMax+offset,[cloudData[0]*0+1.1*dfMax+offset])
-        namesCloud= ['cloud']+meansLabel
+        namesCloud= ['%Cloud']+meansLabel
         source = ColumnDataSource(data=dict(x=cloudDataShiftIndex,
                                     y=np.append(cloudData*0+dfMax,[cloudData[0]*0+dfMax]),
-                                    names=['cloud']+meansLabel))
+                                    names=['%Cloud']+meansLabel))
 
 
 
@@ -514,21 +518,18 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         amountOfRainDays = len([x for x in rain if float(x*100) >= rainyDaythresholdPercentage])
         rainDataShiftIndex = rain.index + pd.DateOffset(hours=12)
         #l0 = p.circle(x=cloudData.index.values, y=cloudData*magnification, line_width=10,color='grey')
-        rainLabel = [str(int(round(100*(x),0)))+'%' for x in rain.values.tolist()]
+        rainLabel = [str(int(round(100*(x),0))) for x in rain.values.tolist()]
 
-        if len(rainDataShiftIndex)>=10:
-            beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(24, 'h')
-        else:
-            beginLabelRain = rainDataShiftIndex.values[0] - np.timedelta64(12, 'h')
+        beginLabelRain = rainDataShiftIndex.values[-1] + np.timedelta64(12, 'h')
         #rainDataShiftIndex = np.insert(rainDataShiftIndex,0,beginLabelRain)
         rainDataShiftIndex = np.r_[beginLabelRain, rainDataShiftIndex]
         offset=0
         x=rainDataShiftIndex
         y=np.append(rain*0+1.2*dfMax+offset,[rain[0]*0+1.2*dfMax+offset])
-        names=['Rain']+rainLabel
+        names=['%Rain']+rainLabel
         rainSource = ColumnDataSource(data=dict(x=rainDataShiftIndex,
                                     y=np.append(rain*0+dfMax,[rain[0]*0+dfMax]),
-                                    names=['Rain']+rainLabel))
+                                    names=['%Rain']+rainLabel))
 
         rainLabels = LabelSet(x='x', y='y', text='names', level='glyph',x_offset=-5, y_offset=30,source=rainSource, render_mode='canvas',text_font_size="10pt",text_color='blue')
         p.add_layout(rainLabels)
@@ -547,10 +548,10 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         printObject.nrOfCloudyDays=amountOfCloudDays
         printObject.nrOfRainyDays=amountOfRainDays
 
-        cleaningDatesString=[createReadableDate(str(cleaning.date()))[0:5] for cleaning in project.cleaningDates]
-        internetProbString = [createReadableDate(str(internetProb.date()))[0:5] for internetProb in project.internetProblems]
-        gridProbString = [createReadableDate(str(gridProb.date()))[0:5] for gridProb in project.gridProblemData]
-        maintenaceString = [createReadableDate(str(maintenace.date()))[0:5] for maintenace in project.maintenanceData]
+        cleaningDatesString=[createReadableDate(str(cleaning.date()))[0:5] for cleaning in project.cleaningDates if begindate<=cleaning<=enddate]
+        internetProbString = [createReadableDate(str(internetProb.date()))[0:5] for internetProb in project.internetProblems if begindate<=internetProb<=enddate]
+        gridProbString = [createReadableDate(str(gridProb.date()))[0:5] for gridProb in project.gridProblemData if begindate<=gridProb<=enddate]
+        maintenaceString = [createReadableDate(str(maintenace.date()))[0:5] for maintenace in project.maintenanceData if begindate<=maintenace<=enddate ]
 
 
 
@@ -573,29 +574,33 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 ####ADD clean DATA
-        NrOfDates = len(project.cleaningDates)
-        shiftedCleaningDates = [x+pd.DateOffset(hours=12) for x in project.cleaningDates]
+
+        shiftedCleaningDates = [x+pd.DateOffset(hours=12) for x in project.cleaningDates if begindate<=x<=enddate]
+        NrOfDates = len(shiftedCleaningDates)
         cleaningLabels = p.circle(x=shiftedCleaningDates,y=[1.03*dfMax]*NrOfDates,line_color='orange',line_width=10)
         lineLegends.append(('cleaning',[cleaningLabels]))
 
         ax1.scatter(shiftedCleaningDates,[1.03*dfMax]*NrOfDates,color='orange',label='cleaning',s=30)
 
 
-        NrOfDatesG = len(project.gridProblemData)
-        shiftedGridProbDates = [x+pd.DateOffset(hours=12) for x in project.gridProblemData]
+
+        shiftedGridProbDates = [x+pd.DateOffset(hours=12) for x in project.gridProblemData if begindate<=x<=enddate]
+        NrOfDatesG = len(shiftedGridProbDates)
         gribProdLabels = p.circle(x=shiftedGridProbDates,y=[1.03*dfMax]*NrOfDatesG,line_color='red',line_width=10)
 
         ax1.scatter(shiftedGridProbDates,[1.03*dfMax]*NrOfDatesG,color='red',label='Problem',s=30)
 
 
-        NrOfDatesM = len(project.maintenanceData)
-        shiftedmaintanenanceDates = [x+pd.DateOffset(hours=12) for x in project.maintenanceData]
+
+        shiftedmaintanenanceDates = [x+pd.DateOffset(hours=12) for x in project.maintenanceData if begindate<=x<=enddate]
+        NrOfDatesM = len(shiftedmaintanenanceDates)
         maintenanceLabels = p.circle(x=shiftedmaintanenanceDates,y=[1.03*dfMax]*NrOfDatesM,line_color='red',line_width=10)
 
         ax1.scatter(shiftedmaintanenanceDates,[1.03*dfMax]*NrOfDatesM,color='red',s=30)
 
-        NrOfDatesI = len(project.internetProblems)
-        shiftedinternetProbDates = [x+pd.DateOffset(hours=12) for x in project.internetProblems]
+
+        shiftedinternetProbDates = [x+pd.DateOffset(hours=12) for x in project.internetProblems if begindate<=x<=enddate]
+        NrOfDatesI = len(shiftedinternetProbDates)
         internetProbLabels = p.circle(x=shiftedinternetProbDates,y=[1.03*dfMax]*NrOfDatesI,line_color='red',line_width=10)
         lineLegends.append(('Problem',[gribProdLabels,maintenanceLabels,internetProbLabels]))
 
@@ -660,14 +665,14 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 ##################################################
         fig2 = plt.figure(figsize=(12,5))
         ax1 = fig2.add_subplot(111)
-        ax1.set_ylabel('kWh',color='blue')
+        ax1.set_ylabel('kWh/hWP',)
         ax1.set_xlabel('Time')
-        ax2 = ax1.twinx()
-        ax2.set_ylabel('kWh/kWP', color='green')
+        #ax2 = ax1.twinx()
+        #ax2.set_ylabel('kWh/kWP', color='green')
 
 
 
-        p2 = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kWh',toolbar_sticky=False)
+        p2 = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kWh/kWP',toolbar_sticky=False)
         p2.title.text_font_size='15pt'
         p2.xaxis.major_label_orientation = math.pi/4
 
@@ -680,8 +685,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 
-        #####ADD kWh DATA
-
+        #####ADD kWh/KWP DATA
         totalKWhPerday = kWhPerDay.sum(axis=1)
         beginDate = totalKWhPerday.index.values[0]
         endDate = totalKWhPerday.index.values[-1]
@@ -695,21 +699,21 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         dfMaxkWhkWP=(df/project.totalkWP).max().max()
         yValues=df[df.columns[0]]
 
-        p2.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
-        p2.extra_y_ranges = {"etxraAxis": Range1d(start=0, end=2*dfMaxkWhkWP)}
+        p2.y_range=Range1d(-0.5, 1.2*dfMaxkWhkWP)
+        #p2.extra_y_ranges = {"etxraAxis": Range1d(start=0, end=1.2*dfMaxkWhkWP)}
         lineLegends2=[]
 
         plotDates = [createReadableDate(date) for date in df.index.values]
         plotDates = [datetime.datetime.strptime(d,'%d/%m/%Y').date() for d in plotDates]
 
-        kwhLine = p2.line(x=df.index.values,y=yValues,color='blue')
-        if len(df.index.values)==1:
-            ax1.plot(plotDates,yValues,label='kWh',color='blue',marker='o',linewidth='1')
-        else:
-            ax1.plot(plotDates,yValues,label='kWh',color='blue',linewidth='1')
+        #kwhLine = p2.line(x=df.index.values,y=yValues,color='blue')
+        #if len(df.index.values)==1:
+            #ax1.plot(plotDates,yValues,label='kWh',color='blue',marker='o',linewidth='1')
+        #else:
+            #ax1.plot(plotDates,yValues,label='kWh',color='blue',linewidth='1')
 
-        p2.yaxis.axis_label_text_color = "blue"
-        p2.add_layout(LinearAxis(y_range_name="etxraAxis",axis_label='kWh/kWP',axis_label_text_color='green'), 'right')
+        #p2.yaxis.axis_label_text_color = "blue"
+        #p2.add_layout(LinearAxis(y_range_name="etxraAxis",axis_label='kWh/kWP',axis_label_text_color='green'), 'right')
 
         p2.xaxis[0].ticker=DatetimeTicker(desired_num_ticks=len(cloudData))
 
@@ -717,60 +721,90 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
         ###ADD Averages
+        GIIdaily=[]
 
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
         if(useRealValues==False):
             GIIdaily=project.getGII(projectDateBeginString,projectDateEndString)
 
         if (useRealValues==True):
-            GIIdaily=round(project.getRealGII(projectDateBeginString,projectDateEndString).mean(),2)
+            GIIdailyReal = project.getRealGII(projectDateBeginString,projectDateEndString)
+            GIIdaily=round(GIIdailyReal.mean(),2)
 
 
         projectAVG = round(expPR*GIIdaily/100,2)
         dfMaxkWh=max(projectAVG*project.totalkWP,dfMaxkWh)
 
-        p2.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
-
 
         yvaluesAVG = [projectAVG*project.totalkWP]*len(yValues)
-        ExpAvhKwhLine = p2.line(x=df.index.values,y=yvaluesAVG,color='lightblue',line_width=2)
-        kwhKWPLIne = p2.line(x=df.index.values,y=yValues/project.totalkWP,color='green',y_range_name="etxraAxis")
+
+        if (useRealValues==True):
+            projectAVG = expPR/100*GIIdailyReal
+            dfMaxkWh=max(projectAVG.max().max()*project.totalkWP,dfMaxkWh)
+            p2.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
+            yvaluesAVG = projectAVG*project.totalkWP
+
+
+
+        #ExpAvhKwhLine = p2.line(x=df.index.values,y=yvaluesAVG,color='lightblue',line_width=2)
+        kwhKWPLIne = p2.line(x=df.index.values,y=yValues/project.totalkWP,color='black')
 
 
         if len(plotDates)==1:
-            ax2.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='green',marker='o',linewidth='1')
-            ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',marker='o',linewidth='1')
+            ax1.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='black',marker='o',linewidth='1')
+            #ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',marker='o',linewidth='1')
         else:
-            ax2.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='green',linewidth='1')
-            ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',linewidth='1')
+            ax1.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='black',linewidth='1')
+            #ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',linewidth='1')
+
+        if (useRealValues==True):
+            yValueskWP=projectAVG
+            dfMaxkWhkWP=max(dfMaxkWhkWP,projectAVG.max().max())
+        else:
+            yValueskWP=[projectAVG]*len(yValues)#[x/project.totalkWP for x in yvaluesAVG]
+            dfMaxkWhkWP=max(dfMaxkWhkWP,projectAVG)
 
 
-        yValueskWP=[projectAVG]*len(yValues)#[x/project.totalkWP for x in yvaluesAVG]
-        dfMaxkWhkWP=max(dfMaxkWhkWP,projectAVG)
 
-        p2.extra_y_ranges = {"etxraAxis": Range1d(start=0, end=2*dfMaxkWhkWP)}
-        ExpKWhKWP= p2.line(x=df.index.values,y=yValueskWP,y_range_name="etxraAxis",color='lightgreen',line_width=2)
+
+
+
+        #p2.extra_y_ranges = {"etxraAxis": Range1d(start=0, end=1.2*dfMaxkWhkWP)}
+        p2.y_range=Range1d(-0.5, 1.2*dfMaxkWhkWP)
+        ExpKWhKWP= p2.line(x=df.index.values,y=yValueskWP,color='lightgreen',line_width=2)
         if(len(plotDates)==1):
-            ax2.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',marker='o',linewidth='1')
+            if (useRealValues==True):
+                ax1.plot(plotDates,yValueskWP,label='Exp. kWh/kWP',color='lightgreen',marker='o',linewidth='1')
+            else:
+                ax1.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',marker='o',linewidth='1')
         else:
-            ax2.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',linewidth='1')
+            if (useRealValues==True):
+                ax1.plot(plotDates,yValueskWP,label='Exp. kWh/kWP',color='lightgreen',linewidth='1')
+            else:
+                ax1.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',linewidth='1')
 
 
         if (len(df.index.values)==1):
-            ExpKWhKWPLinePoints = p2.circle(x=df.index.values,y=yValueskWP,y_range_name="etxraAxis",color='lightgreen', size=10)
+            ExpKWhKWPLinePoints = p2.circle(x=df.index.values,y=yValueskWP,color='lightgreen', size=10)
             kwhLinePoints = p2.circle(x=df.index.values,y=yValues,color='blue', size=10)
-            ExpAvhKwhLinePoints = p2.circle(x=df.index.values,y=yvaluesAVG,color='lightblue', size=10)
-            kwhKWPLinePoints = p2.circle(x=df.index.values,y=yValues/project.totalkWP,y_range_name="etxraAxis",color='green', size=10)
+            #ExpAvhKwhLinePoints = p2.circle(x=df.index.values,y=yvaluesAVG,color='lightblue', size=10)
+            kwhKWPLinePoints = p2.circle(x=df.index.values,y=yValues/project.totalkWP,color='black', size=10)
 
-            lineLegends2.append(('kWh',[kwhLine,kwhLinePoints]))
-            lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine,ExpAvhKwhLinePoints]))
+            #lineLegends2.append(('kWh',[kwhLine,kwhLinePoints]))
+            #lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine,ExpAvhKwhLinePoints]))
             lineLegends2.append(('kWh/kWP',[kwhKWPLIne,kwhKWPLinePoints]))
-            lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP,ExpKWhKWPLinePoints]))
+            if (useRealValues==True):
+                lineLegends2.append(('Exp. kWh/kWP',[ExpKWhKWP,ExpKWhKWPLinePoints]))
+            else:
+                lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP,ExpKWhKWPLinePoints]))
         else:
-            lineLegends2.append(('kWh',[kwhLine]))
-            lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine]))
+            #lineLegends2.append(('kWh',[kwhLine]))
+            #lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine]))
             lineLegends2.append(('kWh/kWP',[kwhKWPLIne]))
-            lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP]))
+            if (useRealValues==True):
+                lineLegends2.append(('Exp. kWh/kWP',[ExpKWhKWP]))
+            else:
+                lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP]))
 
 
 
@@ -781,19 +815,20 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
         h1, l1 = ax1.get_legend_handles_labels()
-        h2, l2 = ax2.get_legend_handles_labels()
+        #h2, l2 = ax2.get_legend_handles_labels()
 
 
 
 
-        ax1.set_ylim([-0.5, 1.2*dfMaxkWh])
-        ax2.set_ylim(0,2*dfMaxkWhkWP)
+        #ax1.set_ylim([-0.5, 1.2*dfMaxkWh])
+        ax1.set_ylim([-0.5, 1.2*dfMaxkWhkWP])
+        #ax2.set_ylim(0,2*dfMaxkWhkWP)
         ax1.set_xticks(plotDates2[0::1],minor=False)
         ax1.set_xticks(plotDates2[1::2],minor=True)
         ax1.set_xticklabels(plotDates,rotation=45,ha='right',fontsize=8)
         ax1.xaxis.grid(linewidth=0.5,which='minor')
         ax1.yaxis.grid(linewidth=0.5,which='major')
-        ax1.legend(h1+h2, l1+l2,loc='upper center', bbox_to_anchor=(0.5, 1.1),
+        ax1.legend(h1, l1,loc='upper center', bbox_to_anchor=(0.5, 1.1),
               ncol=8, fancybox=True)
         myFmt = mdates.DateFormatter('%d %B %Y')
         ax1.xaxis.set_major_formatter(myFmt)
@@ -805,16 +840,21 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         totalGenerated = totalkWh
 
 
-        underperfDays = sum([1 if x<projectAVG*project.totalkWP else 0 for x in totalKWhPerday[totalKWhPerday.columns[0]]])
-        overperfDays = sum([1 if x>=projectAVG*project.totalkWP else 0 for x in totalKWhPerday[totalKWhPerday.columns[0]]])
+        if (useRealValues==True):
+            underperfDays = sum([1 if x<y*project.totalkWP else 0 for (x,y) in zip(yValues,projectAVG)])
+            overperfDays = sum([1 if x>=y*project.totalkWP else 0 for (x,y) in zip(yValues,projectAVG)])
+
+        else:
+            underperfDays = sum([1 if x<projectAVG*project.totalkWP else 0 for x in totalKWhPerday[totalKWhPerday.columns[0]]])
+            overperfDays = sum([1 if x>=projectAVG*project.totalkWP else 0 for x in totalKWhPerday[totalKWhPerday.columns[0]]])
 
 
 
         GHIdaily= project.getGHI(projectDateBeginString,projectDateEndString)
-        GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
+
+        #GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
         if (useRealValues==True):
-            GIIdaily=round(project.getRealGII(projectDateBeginString,projectDateEndString).mean(),2)
-        percentage = round(project.getPercentageChange(projectDateBeginString,projectDateEndString),2)
+            GHIdaily = round(project.realGHI.mean(),2)
 
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
         expDailyAvg=round(expPR*GIIdaily/100,2)
@@ -1180,7 +1220,7 @@ def createNewProjectScreen(quickReport=False):
     inverter1SampleRate = TextInput(value="15Min", title="Sample rate (e.g.'15Min','1H'):")
 
     filePick1 = TextInput(value="/Users/christiaan/Desktop/Solcor/dataMergeWeek/Neuces2/Nueces/Nueces", title="Inverter 1 data:")
-    fileColumn1 = TextInput(value="2", title="Inverter 1 column nr in file:")
+    fileColumn1 = TextInput(value="1", title="Inverter 1 column nr in file:")
 
 
     inverterLabels.append([inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,filePick1,fileColumn1,inverter1SampleRate])
@@ -1608,7 +1648,9 @@ def showManagementScreen(ID):
         fileColumn1 = TextInput(value=str(inverter.columnNumber), title="Inverter "+inverterID+" column nr in file:")
 
         upDateInveterButton=Button(label='Save changes')
-        upDateInveterButton.on_click(partial(updateInverterData,project,inverter,inverter1Type,inverter1Tot,inverter1Totkw,inverter1SampleRate,filePick1,fileColumn1))
+        upDateInveterButton.on_click(partial(updateInverterData,project,inverter,inverter1Type,inverter1Tot,inverter1Totkw,inverter1Extra,inverter1SampleRate,filePick1,fileColumn1))
+
+
 
         deleteInverterButton=[]
         if (int(inverterID) > 1):
@@ -1983,7 +2025,7 @@ def homescreen(firstTime):
     inspectdropdown.on_change('value', partial(inspectProject))
 
 
-    buttonShowDashboard = Button(label="Dashboard")
+    buttonShowDashboard = Button(label="Project overview")
 
     buttonCreateQuickReport = Button(label="Create quick report")
     buttonCreateQuickReport.on_click(partial(createNewProjectScreen,quickReport=True))

@@ -17,9 +17,7 @@ def requestSolargisData(lat,lon,beginDate,EndDate,siteName,id,listOfRequests,sam
     data=[]
     data = reponse_xml.findall('.//xmlns:row',namespaces)
     data = [tuple(reversed([a[1] for a in element.attrib.items()])) for element in data]
-    print(data)
     data = [[el[0]]+el[1].split() for el in data]
-    print(data)
     df = pd.DataFrame(data)
     columnames = ['timestamp'] + listOfRequests
     df.columns = columnames
