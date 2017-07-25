@@ -78,7 +78,7 @@ def getkWhPerDay(dataList,sampleRates):
         df = pd.DataFrame(result,index=dates,columns=DFList[0].columns)
         return df
     except:
-                    print("No data found in the folder!")
+        print("C_error: no data found in folder!")
 
 def getTotalkWh(dataList,sampleRates):
     df = getkWhPerDay(dataList,sampleRates)

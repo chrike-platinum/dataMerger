@@ -1,17 +1,26 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'christiaan'
-import pandas as pd
 from os import listdir
 from os.path import isfile, join
 import re
-import matplotlib.pyplot as plt
 import os
-import glob
 from cStringIO import StringIO
-import datetime
+
+import pandas as pd
 
 
+def convertToMin(sampleRate):
+    if "Min" in sampleRate:
+        return float(sampleRate.split('Min', 1)[0])
+    if "T" in sampleRate:
+        return float(sampleRate.split('T', 1)[0])
+    if "H" in sampleRate:
+        return float(sampleRate.split('H', 1)[0]) * 60
+    if "D" in sampleRate:
+        return float(sampleRate.split('D', 1)[0]) * 24 * 60
+    if "W" in sampleRate:
+        return float(sampleRate.split('W', 1)[0]) * 168 * 60
 
 
 def searchStartingRowCSV(dataPath,fileName):
@@ -37,6 +46,7 @@ def searchStartingRowCSV(dataPath,fileName):
         dateIncluded = True
     return beginRow,dateIncluded,inverterName
 
+
 def importCSVFile(dataPath,fileName,sampleRate2):
     sampleRate = str(sampleRate2)
     start,dateIncluded,inverterName = searchStartingRowCSV(dataPath,fileName)
@@ -48,26 +58,34 @@ def importCSVFile(dataPath,fileName,sampleRate2):
     if ('.' in str(df.index.values[1])[:10]):
         dateparse = lambda x: pd.datetime.strptime(x, '%d.%m.%Y %H:%M')
         df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(dataPath+'/'+fileName))), sep=';', encoding='latin1',date_parser=dateparse, parse_dates=True,index_col=0,skiprows=start+1)
-        df = df.apply(pd.to_numeric, args=('coerce',))
+        df = df.apply(pd.to_numeric, args=('coerce',)).fillna(0)
         df=df.dropna(axis=1,how='all')
         dateDF = str(df.index.values[1])[:10].replace('.','-')
+        endDateDF = str(df.index.values[-1])[:10].replace('.', '-')
 
+    test3 = len([col for col in df.columns if '(wh)' in col.lower()])
+    test4 = len([col for col in df.columns if '[wh]' in col.lower()])
+    if (test3 + test4 > 0):
+        df = (df * 60 / convertToMin(sampleRate)) / 1000
+        df = df.add_suffix('[kW]')
+
+    test5 = len([col for col in df.columns if '(kwh)' in col.lower()])
+    test6 = len([col for col in df.columns if '[kwh]' in col.lower()])
+    if (test5 + test6 > 0):
+        df = (df * 60 / convertToMin(sampleRate))
 
 
     print(str(fileName)+' busy...')
     if dateIncluded:
         print('Date included')
-        ix = pd.DatetimeIndex(start=dateDF+" 00:00:00", end=dateDF+" 23:45:00", freq=sampleRate)
-        print('ix',ix)
+        ix = pd.DatetimeIndex(start=dateDF + " 00:00:00", end=endDateDF + " 23:45:00", freq=sampleRate)
         df = df.resample(sampleRate).mean().ffill().reindex(ix).fillna(0)
-        print('NEwestDF',df)
     else:
         try:
             date = re.search("([0-9]{4}\-[0-9]{2}\-[0-9]{2})", fileName).group(1)
             print('date found: '+date)
             ix = pd.DatetimeIndex(start=date+" 00:00:00", end=date+" 23:45:00", freq=sampleRate)
             df = df.resample(sampleRate).mean().ffill().set_index(ix).fillna(0)
-
 
         except:
             print("No date found in file name!!! Used sampleDate of today ")
@@ -85,6 +103,7 @@ def importCSVFile(dataPath,fileName,sampleRate2):
     if(test1+test2>0):
         df=df/1000
         df = df.add_suffix('[kW]')
+
     return df
 
 def combineAllData(listOfDataFrames):

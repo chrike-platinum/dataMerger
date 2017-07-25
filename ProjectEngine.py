@@ -3,10 +3,6 @@ __author__ = 'christiaan'
 
 from project import Project
 import dataHandler as DH
-import time
-
-
-
 
 
 def createProject(generalData,geoData,totalData,inverterData,maintananceData,ExtraData,adresData,solargisFileLocation,GHIdf):
@@ -27,10 +23,10 @@ def updateAllProjects():
     projectList = DH.getAllSavedProjects()
     for project in projectList:
         try:
-            print('updating: '+str(project.name))
+            print('updating: ' + str(project.name) + '...')
             checkForDataUpdates(project)
             #time.sleep(1)
-            print("uit check for updates")
+            print(str(project.name) + " updated")
             DH.saveProject(project)
         except:
             print('Could not update '+str(project.name)+'. 1) Check directory name 2) only .csv production files are allowed in the directory')

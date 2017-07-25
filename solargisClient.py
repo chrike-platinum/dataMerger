@@ -1,10 +1,17 @@
-
 import urllib2
+import ftplib
+from StringIO import StringIO
 import xml.etree.ElementTree as ET
-from xml import etree
+
 import pandas as pd
-global APIkey
+
+global APIkey, FTPDomain, FTPUsername, FTPPW
 APIkey ='V4Vf064Jx4F1gbmsl8sl' #Replace if needed
+
+FTPDomain = 'ftp.solargis.com'
+FTPUsername = 'SOLCOR'
+FTPPW = 'enaR78A'
+
 
 
 def requestSolargisData(lat,lon,beginDate,EndDate,siteName,id,listOfRequests,samplerate,terrainShading):
@@ -67,3 +74,22 @@ def doSolargisAPICall(request_xml):
     except urllib2.HTTPError as e:
           print 'Error message from the Solargis server: %s' % e.read()
 
+
+def FTPCall(CSVFileName, targetFolder):
+    ftp = ftplib.FTP(FTPDomain, FTPUsername, FTPPW)
+    files = ftp.dir('/')
+    ftp.cwd("/")
+    filematch = 'CLIMDATA/' + CSVFileName
+    target_dir = targetFolder
+    import os
+
+    for filename in ftp.nlst(filematch):
+        target_file_name = os.path.join(target_dir, os.path.basename(filename))
+        with open(target_file_name, 'wb') as fhandle:
+            ftp.retrbinary('RETR %s' % filename, fhandle.write)
+
+    df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(target_dir + '/' + CSVFileName))),
+                     encoding='latin1', parse_dates=False, header=None)
+    return df
+
+    # print(FTPCall('SolarGIS_hourly_1_Bratislava_Slovakia_20170101_20170131.csv','/Users/christiaan/Desktop'))

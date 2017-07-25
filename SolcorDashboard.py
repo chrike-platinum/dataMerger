@@ -4,8 +4,6 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-import ntpath
-
 __author__ = 'christiaan'
 
 local_encoding = 'cp850'
@@ -14,37 +12,28 @@ tempPlotDir = 'tempPlots/'
 plotFileName = 'plot'
 global PDFoutput
 
-
-
-
-from bokeh.layouts import widgetbox, row, column, layout
+from bokeh.layouts import row, column, layout
 from bokeh.models.widgets import CheckboxGroup
-from bokeh.models import Button, HoverTool
+from bokeh.models import Button
 from bokeh.plotting import figure, curdoc
-from bokeh.models.widgets import Panel, Tabs, Paragraph, Div
+from bokeh.models.widgets import Div
 import CalculationEngine as CE
 from bokeh.models import CustomJS
 from bokeh.models import DatetimeTickFormatter
 import pandas as pd
-from bokeh.models import ColumnDataSource, Range1d, LabelSet, Label
+from bokeh.models import ColumnDataSource, LabelSet
 from itertools import cycle
-from bokeh.models import LinearAxis, Range1d
+from bokeh.models import Range1d
 from bokeh.models.tickers import DatetimeTicker
-from bokeh.client import push_session
 from functools import partial
-from bokeh.io import output_file, show
-from bokeh.layouts import widgetbox
 from bokeh.models.widgets import Dropdown
-from bokeh.models import DatePicker, HBox
 import datetime
 from bokeh.models.widgets import TextInput
 import ProjectEngine as PE
 import math
-from bokeh.models import SingleIntervalTicker, LinearAxis
 from bokeh.models.widgets import Select
 import time
 import bokeh.io as BIO
-from bokeh.embed import components
 import matplotlib.pyplot as plt
 import numpy as np
 import re
@@ -57,8 +46,8 @@ import dataHandler as DH
 from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
 from inverter import Inverter
 import os
-from bokeh.models.widgets import Toggle
-
+# from bokeh.models.widgets import Toggle
+from bokeh.models.widgets import RadioGroup
 
 
 printObject = PrintObject()
@@ -284,8 +273,9 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
 
     GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
-    if (useRealValues==True):
-        GIIdailyReal = project.getRealGII(projectDateBeginString,projectDateEndString)
+    if (useRealValues == 1):
+        GIIdailyReal = project.getRealGII(projectDateBeginString, projectDateEndString, DH)
+        GIIdailyReal = GIIdailyReal['GII']
         GIIdaily=round(GIIdailyReal.mean(),2)
 
 
@@ -294,8 +284,9 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
     expDailyAvg=round(expPR*GIIdaily/100,2)
 
     avg = [expDailyAvg]*len(kWhPerDay.index.values)
-    if (useRealValues==True):
-        avg = GIIdailyReal
+    if (useRealValues == 1):
+        avg = expPR / 100 * GIIdailyReal
+
 
     avgLine = p3.line(x=kWhPerDay2.index.values,y=avg,color='black',line_dash='dotted')
     avgLines = [avgLine]
@@ -419,12 +410,18 @@ def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain
 
     return buttonBanner
 
-def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,useRealValues,autoPrint=False,reportType=None):
+
+def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rain, projectDateBeginString,
+                      projectDateEndString, UsedSolargisData, autoPrint=False, reportType=None):
 
 
         buttonBanner = createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir)
 
-        banner = createInfoBanner(project,projectDateBeginString,projectDateEndString,reportNumber,useRealValues)
+        realTimeData = True
+        if UsedSolargisData == 0:
+            realTimeData = False
+
+        banner = createInfoBanner(project, projectDateBeginString, projectDateEndString, reportNumber, realTimeData)
 
         p = figure(width=1200, height=500,x_axis_type='datetime',x_axis_label='Time',y_axis_label='kW',toolbar_sticky=False)
         p.title.text_font_size='15pt'
@@ -724,11 +721,13 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         GIIdaily=[]
 
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
-        if(useRealValues==False):
+        print('CAVERAGESOLARAGIS', UsedSolargisData)
+        if (UsedSolargisData == 0):
             GIIdaily=project.getGII(projectDateBeginString,projectDateEndString)
 
-        if (useRealValues==True):
-            GIIdailyReal = project.getRealGII(projectDateBeginString,projectDateEndString)
+        if (UsedSolargisData == 1):
+            GIIdailyReal = project.getRealGII(projectDateBeginString, projectDateEndString, DH)
+            GIIdailyReal = GIIdailyReal['GII']
             GIIdaily=round(GIIdailyReal.mean(),2)
 
 
@@ -738,12 +737,11 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
         yvaluesAVG = [projectAVG*project.totalkWP]*len(yValues)
 
-        if (useRealValues==True):
+        if (UsedSolargisData == 1):
             projectAVG = expPR/100*GIIdailyReal
             dfMaxkWh=max(projectAVG.max().max()*project.totalkWP,dfMaxkWh)
             p2.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
             yvaluesAVG = projectAVG*project.totalkWP
-
 
 
         #ExpAvhKwhLine = p2.line(x=df.index.values,y=yvaluesAVG,color='lightblue',line_width=2)
@@ -757,7 +755,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
             ax1.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='black',linewidth='1')
             #ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',linewidth='1')
 
-        if (useRealValues==True):
+        if (UsedSolargisData == 1):
             yValueskWP=projectAVG
             dfMaxkWhkWP=max(dfMaxkWhkWP,projectAVG.max().max())
         else:
@@ -768,17 +766,16 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
 
 
-
         #p2.extra_y_ranges = {"etxraAxis": Range1d(start=0, end=1.2*dfMaxkWhkWP)}
         p2.y_range=Range1d(-0.5, 1.2*dfMaxkWhkWP)
         ExpKWhKWP= p2.line(x=df.index.values,y=yValueskWP,color='lightgreen',line_width=2)
         if(len(plotDates)==1):
-            if (useRealValues==True):
+            if (UsedSolargisData == 1):
                 ax1.plot(plotDates,yValueskWP,label='Exp. kWh/kWP',color='lightgreen',marker='o',linewidth='1')
             else:
                 ax1.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',marker='o',linewidth='1')
         else:
-            if (useRealValues==True):
+            if (UsedSolargisData == 1):
                 ax1.plot(plotDates,yValueskWP,label='Exp. kWh/kWP',color='lightgreen',linewidth='1')
             else:
                 ax1.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',linewidth='1')
@@ -793,7 +790,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
             #lineLegends2.append(('kWh',[kwhLine,kwhLinePoints]))
             #lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine,ExpAvhKwhLinePoints]))
             lineLegends2.append(('kWh/kWP',[kwhKWPLIne,kwhKWPLinePoints]))
-            if (useRealValues==True):
+            if (UsedSolargisData == 1):
                 lineLegends2.append(('Exp. kWh/kWP',[ExpKWhKWP,ExpKWhKWPLinePoints]))
             else:
                 lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP,ExpKWhKWPLinePoints]))
@@ -801,7 +798,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
             #lineLegends2.append(('kWh',[kwhLine]))
             #lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine]))
             lineLegends2.append(('kWh/kWP',[kwhKWPLIne]))
-            if (useRealValues==True):
+            if (UsedSolargisData == True):
                 lineLegends2.append(('Exp. kWh/kWP',[ExpKWhKWP]))
             else:
                 lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP]))
@@ -839,8 +836,7 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
 
         totalGenerated = totalkWh
 
-
-        if (useRealValues==True):
+        if (UsedSolargisData == 1):
             underperfDays = sum([1 if x<y*project.totalkWP else 0 for (x,y) in zip(yValues,projectAVG)])
             overperfDays = sum([1 if x>=y*project.totalkWP else 0 for (x,y) in zip(yValues,projectAVG)])
 
@@ -853,8 +849,8 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         GHIdaily= project.getGHI(projectDateBeginString,projectDateEndString)
 
         #GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
-        if (useRealValues==True):
-            GHIdaily = round(project.realGHI.mean(),2)
+        if (UsedSolargisData == 1):
+            GHIdaily = round(project.realGHI[projectDateBeginString:projectDateEndString].mean(), 2)
 
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
         expDailyAvg=round(expPR*GIIdaily/100,2)
@@ -901,7 +897,8 @@ def showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,pro
         kWhPerDay = kWhPerDay.reindex(idx, fill_value=0)
 
         inverterGraphs =[]
-        inverterGraphs.append(createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndString,useRealValues))
+        inverterGraphs.append(
+            createInverterPlots(kWhPerDay, project, projectDateBeginString, projectDateEndString, UsedSolargisData))
 
         inverterGraphs= [item for sublist in inverterGraphs for item in sublist]
         inverterGraphs = column(inverterGraphs)
@@ -968,7 +965,7 @@ def conversion(old):
 
 
 def collectData(statusBanner,saveData=False):
-
+    statusBanner.text = ''
     go=True
     if (os.path.exists(solargisLocation.value)==False):
          statusBanner.text=' Solargis file (or directory) does not exist.'
@@ -1062,16 +1059,19 @@ def collectData(statusBanner,saveData=False):
 
                 try:
                     kWhPerDay = CE.getkWhPerDay(inputData,[x[6] for x in InverterData])
-
-
+                    print('KWh per day collected')
                     totalkWh = CE.getTotalkWh(inputData,[x[6] for x in InverterData])
+                    print('Total KWh collected')
                     cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
+                    print('Cloud data collected')
                     rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-                    showProjectScreen(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,realDataToggle.active)
+                    print('Rain data collected')
+                    showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rain,
+                                      projectDateBeginString, projectDateEndString, toggleDataChoice.active)
                 except:
-                    print('No data found in the folder!')
+                    print('C_Error: No data found in folder!')
         else:
-            statusBanner.text="Error: Project name already in Database!"
+            statusBanner.text = "C_Error: Project name already in Database!"
 
 
 def insertInverterLayout():
@@ -1137,11 +1137,30 @@ def removeInverterLayout():
         globNewLayout.children = []
         globNewLayout.children=[layout(updatedLayout)]
 
-def handleToggle(test):
-    if (realDataToggle.label=="Use real time data: OFF"):
-        realDataToggle.label='Use real time data: ON'
+    del inverterLabels[-1]
+
+
+def handleSolargisChoice(val, old, newChoice):
+    global globNewLayout
+    global newLayout
+    global insertSolargisRow
+    oldLayout = newLayout
+    print('dataSourceChoice', newChoice)
+    if (newChoice == 2):
+        SolargisInput = TextInput(value="", title="Solargis real excel location:")
+        oldLayout.insert(insertSolargisRow, [SolargisInput])
+        globNewLayout.children = []
+        globNewLayout.children = [layout(oldLayout)]
     else:
-        realDataToggle.label="Use real time data: OFF"
+        try:
+            if oldLayout[insertSolargisRow][0].title == "Solargis real excel location:":
+                del oldLayout[insertSolargisRow]
+                globNewLayout.children = []
+                globNewLayout.children = [layout(oldLayout)]
+        except:
+            print()
+
+
 
 def createNewProjectScreen(quickReport=False):
     global inverterClickCounter
@@ -1151,11 +1170,12 @@ def createNewProjectScreen(quickReport=False):
     global projectNameTxt,reportNumberTxt,projectOrientation,projectInclination,projectLatitude,projectLongitude,projectDateBegin,projectDateEnd,total,totalkw,totAvg,totExtra
     global projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt,inverter1SampleRate
     global inverter1Type,inverter1Tot,inverter1Totkw,filePick1,inverter2Type,inverter2Tot,inverter2Totkw,filePick2
-    global cleaningDate,extraCommentX,structureDD,gridProbDate,maintenanceDate,internetProblemDate,solargisLocation,solargisYear,extraCommentsDate,realDataToggle
+    global cleaningDate, extraCommentX, structureDD, gridProbDate, maintenanceDate, internetProblemDate, solargisLocation, solargisYear, extraCommentsDate, toggleDataChoice
     div0 = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=30)
     global fileColumn1,fileColumn2
     global inverterLabels
+    global insertSolargisRow
     inverterLabels=[]
 
     if (quickReport):
@@ -1163,10 +1183,10 @@ def createNewProjectScreen(quickReport=False):
     else:
         title="Add new project"
     headingTxt = Div(text="""<p style="font-size:20px;text-align: center">"""+title,
-            width=1200, height=30)
+                     width=1100, height=30)
 
     headingDiv = Div(text="""<hr noshade size=4 color=green>""",
-        width=1200, height=30)
+                     width=1100, height=30)
 
 
     projectNameTxt = TextInput(value="Nueces Del Choapa", title="Project name:")
@@ -1239,8 +1259,11 @@ def createNewProjectScreen(quickReport=False):
     solargisLocation = TextInput(value='/Users/christiaan/Desktop/Solcor/dataMergeWeek/NDC_PV-8627-1705-1780_-31.783--70.984.xls', title="Solargis file location:")
     solargisYear = TextInput(value='2017', title="Solargis file year:")
     if (quickReport==True):
-        realDataToggle = Toggle(label="Use real time data: OFF")
-        realDataToggle.on_click(partial(handleToggle))
+        toggleDataChoice = RadioGroup(labels=["Solargis monthly averages", "Solargis real API", "Solargis real excel"],
+                                      active=0)
+        toggleDataChoice.on_change('active', handleSolargisChoice,)
+
+
 
 
     div4 = Div(text="""<hr noshade size=4 color=green>""",width=1100, height=30)
@@ -1269,18 +1292,22 @@ def createNewProjectScreen(quickReport=False):
     if (quickReport):
         newLayout = [[headingTxt],[headingDiv],[projectNameTxt,reportNumberTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination,projectDateBegin,projectDateEnd],
                  [div],[total,totalkw],[div2],[inverter1Type,filePick1,fileColumn1,inverter1SampleRate],[inverter1Tot,inverter1Totkw],
-                 [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraCommentX,extraCommentsDate,solargisLocation,solargisYear,realDataToggle],[buttonBack,nextButton,statusBanner]]
+                     [], [buttonAddInverter, buttonRemoveInverter, div4],
+                     [cleaningDate, gridProbDate, maintenanceDate, internetProblemDate],
+                     [extraCommentX, extraCommentsDate, solargisLocation, solargisYear, toggleDataChoice],
+                     [buttonBack, nextButton, statusBanner]]
+        insertSolargisRow = len(newLayout) -1
     else:
         newLayout = [[headingTxt],[headingDiv],[projectNameTxt],[projectContactTxt,projectStreetTxt,projectCityTxt,projectTelephoneTxt],[div0],[projectLatitude,projectLongitude,structureDD],[projectOrientation,projectInclination],
                  [div],[total,totalkw],[div2],[inverter1Type,filePick1,fileColumn1,inverter1SampleRate],[inverter1Tot,inverter1Totkw],
                  [],[buttonAddInverter,buttonRemoveInverter,div4],[cleaningDate,gridProbDate,maintenanceDate,internetProblemDate],[extraCommentX,extraCommentsDate,solargisLocation,solargisYear],[buttonBack,nextButton,statusBanner]]
 
-
     globNewLayout.children = []
     globNewLayout.children=[layout(newLayout)]
 
 
-def collectInspectionData(project,projectDateBegin,projectDateEnd,printchoice,statusDiv,reportNumber,toggle,autoPrint=False):
+def collectInspectionData(project, projectDateBegin, projectDateEnd, printchoice, statusDiv, reportNumber,
+                          UsedSolargisData, autoPrint=False):
     statusDiv.text = "Creating PDF..."
     projectDateBeginString = projectDateBegin.value
     projectDateEndString = projectDateEnd.value
@@ -1299,15 +1326,18 @@ def collectInspectionData(project,projectDateBegin,projectDateEnd,printchoice,st
     for inverterTuple in project.inverters:
         sampleRates.append(inverterTuple[1].sampleRate)
 
-
-
+    print('Collecting kWh per day data...')
     kWhPerDay = CE.getkWhPerDay(inputData,sampleRates)
+    print('kWh per day data collected')
     totalkWh = CE.getTotalkWh(inputData,sampleRates)
+    print('total kWh data calculated')
 
-
+    print('Collecting cloud data...')
     cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
+    print('Cloud data data collected')
+    print('Collecting rain data...')
     rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-
+    print('Rain data data collected')
     reportType = None
     if printchoice != None:
         reportSelection = printchoice.active
@@ -1328,8 +1358,8 @@ def collectInspectionData(project,projectDateBegin,projectDateEnd,printchoice,st
         reportNr="n/a"
 
     print
-    useRealData = toggle.active
-    print('USE real data:',useRealData)
+    useRealData = UsedSolargisData.active
+    print('Use real data:', useRealData)
     showProjectScreen(reportNr,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,useRealData,autoPrint=autoPrint,reportType=reportType)
     statusDiv.text = "PDF ready! Saved at: "+str(DH.getSettings()['PDF-output directory'])
 
@@ -1340,7 +1370,6 @@ def removeMaintenance(project,data_table):
     global selection
     dateToRemove = data_table.source.data['dates'][selection[0]]
     kindToRemove = data_table.source.data['maintenance'][selection[0]]
-
 
     if (kindToRemove == 'cleaning'):
         project.cleaningDates.remove(dateToRemove)
@@ -1529,9 +1558,6 @@ def addInverterLayout(inverterID,project):
         width=1100, height=30)]
 
 
-    print('oldayout',oldLayout)
-    print('LENoldayout',len(oldLayout))
-    print('inverterID',inverterID)
 
     del oldLayout[19+int(inverterID)]
 
@@ -1776,15 +1802,21 @@ def showManagementScreen(ID):
 
     ###production data information:
     df = project.getAllInverterData().round(2)
-    df['Date'] = pd.to_datetime(df.index).strftime('%d/%m/%Y %H:%M:%S')
+    df['Date'] = pd.to_datetime(df.index).strftime('%b %d %Y %H:%M:%S')  #.strftime('%d/%m/%Y %H:%M:%S')
     DFdata = dict(df)
     DFsource = ColumnDataSource(DFdata)
     DFcolumns=[]
     headers= list(df)
     popped = headers.pop()
     headers.insert(0,popped)
+    print('headers', headers)
+    #a=0
     for columnName in headers:
-        DFcolumns.append(TableColumn(field=columnName, title=columnName),)
+        # if a==0:
+        #    DFcolumns.append(TableColumn(field=columnName, title=columnName,formatter=DateFormatter(format="dd/M/yy 00:00:00")),)
+        # else:
+        DFcolumns.append(TableColumn(field=columnName, title=columnName), )
+        #a+=1
 
     DFdata_table = DataTable(source=DFsource, columns=DFcolumns, width=500, height=600)
 
@@ -1846,6 +1878,9 @@ def showManagementScreen(ID):
 def showPreInspection(ID):
     project = DH.getProject(int(ID[2:]))
     global globNewLayout
+    global newLayout
+    global insertSolargisRow
+    insertSolargisRow=5
 
     headingTxt = Div(text="""<p style="font-size:20px;text-align: center"> """+str(project.name),
             width=1000, height=30)
@@ -1858,13 +1893,18 @@ def showPreInspection(ID):
     projectDateBegin = TextInput(value="01-04-2017 00:00:00", title="Begin date:")
     projectDateEnd = TextInput(value="30-04-2017 23:45:00", title="End date:")
 
-    toggle = Toggle(label="Use real time data")
+    toggleChoice = RadioGroup(labels=["Solargis monthly averages", "Solargis real API", "Solargis real excel"],
+                              active=0)
+    toggleChoice.on_change('active', handleSolargisChoice)
+
 
     dummyDiv = Div(text="""""",
             width=300, height=10)
 
     inspectButton = Button(label="Inspect")
-    inspectButton.on_click(partial(collectInspectionData,project,projectDateBegin,projectDateEnd,None,dummyDiv,None,toggle,autoPrint=False))
+    inspectButton.on_click(
+        partial(collectInspectionData, project, projectDateBegin, projectDateEnd, None, dummyDiv, None, toggleChoice,
+                autoPrint=False))
 
     sepdiv = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=20)
@@ -1888,7 +1928,9 @@ def showPreInspection(ID):
             width=600, height=10)
 
     printButton = Button(label='Export report(s)')
-    printButton.on_click(partial(collectInspectionData,project,projectPrintDateBegin,projectPrintDateEnd,reportChoice,statusDiv,reportNumber,toggle,autoPrint=True))
+    printButton.on_click(
+        partial(collectInspectionData, project, projectPrintDateBegin, projectPrintDateEnd, reportChoice, statusDiv,
+                reportNumber, toggleChoice, autoPrint=True))
 
     sepprintdiv = Div(text="""<hr noshade size=4 color=green>""",
         width=1000, height=20)
@@ -1896,13 +1938,16 @@ def showPreInspection(ID):
     buttonBack = Button(label="Back")
     buttonBack.on_click(goToHomescreen)
 
+    newLayout = [[headingTxt], [div], [title1Txt], [], [projectDateBegin, projectDateEnd, toggleChoice],
+                 [inspectButton], [sepdiv], [titlePrintTxt], [],
+                 [projectPrintDateBegin, projectPrintDateEnd, reportChoice],
+                 [reportNumber], [printButton], [statusDiv], [sepprintdiv], [buttonBack]]
 
-
-    lay = layout([[headingTxt],[div],[title1Txt],[],[projectDateBegin,projectDateEnd,toggle],[inspectButton],[sepdiv],[titlePrintTxt],[],[projectPrintDateBegin,projectPrintDateEnd,reportChoice],
-                  [reportNumber],[printButton],[statusDiv],[sepprintdiv], [buttonBack]])
+    lay = layout(newLayout)
 
     globNewLayout.children = []
     globNewLayout.children =[lay]
+
 
 
 

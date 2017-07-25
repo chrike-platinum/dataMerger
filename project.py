@@ -1,10 +1,13 @@
 __author__ = 'christiaan'
-import dataLoader as DL
-import pandas as pd
+import os
 import datetime
-from datetime import timedelta, date
+
+import pandas as pd
+
+import dataLoader as DL
 import CalculationEngine as CE
 from inverter import Inverter
+
 
 class Project(object):
 
@@ -65,8 +68,8 @@ class Project(object):
         self.GHIdf=GHIdf
         self.DBID=None
         self.solargisFileLocation=solargisFileLocation
-        self.realGHI=[]
-        self.realGII=[]
+        self.realGHI = pd.DataFrame(columns=['GHI'])
+        self.realGII = pd.DataFrame()
 
 
     def __getitem__(self, item):
@@ -169,20 +172,31 @@ class Project(object):
             returndf=df
         self.GHIdf=returndf
 
-
-    def getRealGHI(self,beginDate,endDate):
+    def getRealGHI(self, beginDate, endDate, DH):
         df =CE.getRealGHIData(str(self.projectLatitude),str(self.projectLongitude),str(beginDate),str(endDate),str(self.name),str(self.name).replace(" ", "")[0:4],['GHI'],'HOURLY','false')
-        df = df.resample('D').sum()
-        self.realGHI =df
+        df = df.resample('D').sum().to_frame()
+        oldfDF = self.realGHI
+        if (not df.empty):
+            returndf = df.merge(oldfDF, left_index=True, right_index=True, how='outer', on=['GHI'])
+        else:
+            returndf = df
+
+        self.realGHI = returndf
+
+        APIdirectory = DH.getSettings()['API Solargis-output directory']
+        fileName = str(self.name) + 'Solargis API Data.csv'
+        fileName = os.path.join(APIdirectory, str(fileName))
+        returndf.to_csv(fileName, sep=';')
+        # TODO save realGHI to csv
         return self.realGHI
 
-    def getRealGII(self,beginDate,endDate):
+    def getRealGHIFromTo(self, beginDate, endDate, DH):
+        return self.getRealGHI(beginDate, endDate, DH)[beginDate:endDate]
+
+    def getRealGII(self, beginDate, endDate, DH):
         percentage = self.getPercentageChange(beginDate,endDate)
-        realGII=(percentage)*self.getRealGHI(beginDate,endDate)
+        realGII = (percentage) * self.getRealGHI(beginDate, endDate, DH)
+        realGII.columns = ['GII']
         self.realGII = realGII
-        return realGII
-
-
-
-
-
+        DH.saveProject(self)  # to update GHI and GII
+        return realGII[beginDate:endDate]

@@ -1,13 +1,13 @@
 __author__ = 'christiaan'
 import cPickle as pickle
-from project import Project
 import os
 databaseFolder="Database/"
 script_dir = os.path.dirname(__file__)
 import time
 
 def resetProgramSettings():
-    dict = {'HTML-output directory':'','PDF-output directory': '', 'Percentage rainy day': 20, 'Percentage cloudy day': 20}
+    dict = {'HTML-output directory': '', 'PDF-output directory': '', 'API Solargis-output directory': '',
+            'Percentage rainy day': 20, 'Percentage cloudy day': 20}
     with open(script_dir+'/'+databaseFolder+"programSettings.dat", "wb") as f:
         pickle.dump(dict, f)
 
@@ -108,7 +108,7 @@ def deleteProject(project):
         if f == 'projectDB'+str(project.DBID)+'.dat':
             os.remove(script_dir+"/"+databaseFolder+"/"+f)
             removeProjectFromIDList(project)
-        time.sleep(0.5)
+        time.sleep(0.05)
 
 
 def resetDB():
