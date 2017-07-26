@@ -226,7 +226,7 @@ def createInfoInverterPart(project,title,listTitleLeft,listLeft,listTitleRight,l
     return column([divTitle,allInfo])
 
 
-def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndString,useRealValues):
+def createInverterPlots(kWhPerDay, project, projectDateBeginString, projectDateEndString, useRealValues, safeData=True):
 
 
     fig = plt.figure(figsize=(12,5))
@@ -266,25 +266,34 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
         plotDates = [createReadableDate(date) for date in kWhPerDay2.index.values]
         plotDates = [datetime.datetime.strptime(d,'%d/%m/%Y').date() for d in plotDates]
         if (len(kWhPerDay2.index.values)==1):
-            ax.plot(plotDates,kWhPerDay2,label='Inv '+str(inverterID),color=color,marker='o',linewidth='1')
+            ax.plot(plotDates, kWhPerDay2, label='Inv ' + str(inverterID + 1), color=color, marker='o', linewidth='1')
         else:
-            ax.plot(plotDates,kWhPerDay2,label='Inv '+str(inverterID),color=color,linewidth='1')
+            ax.plot(plotDates, kWhPerDay2, label='Inv ' + str(inverterID + 1), color=color, linewidth='1')
         inverterID +=1
 
 
     GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
     if (useRealValues == 1):
-        GIIdailyReal = project.getRealGII(projectDateBeginString, projectDateEndString, DH)
+        GIIdailyReal = project.getRealGII(projectDateBeginString, projectDateEndString, DH, saveBool=safeData)
         GIIdailyReal = GIIdailyReal['GII']
         GIIdaily=round(GIIdailyReal.mean(),2)
 
+    if (useRealValues == 2):
+        path = SolargisInput.value
+        realExcelGHI = CE.getRealDailyGHIDataFromExcel(path, projectDateBeginString, projectDateEndString)
+        percentage = project.getPercentageChange(projectDateBeginString, projectDateEndString)
+        realGII = (percentage) * realExcelGHI
+        realGII.columns = ['GII']
+        GIIdailyReal = realGII
+        GIIdailyReal = GIIdailyReal['GII']
+        GIIdaily = round(GIIdailyReal.mean(), 2)
 
 
     expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
     expDailyAvg=round(expPR*GIIdaily/100,2)
 
     avg = [expDailyAvg]*len(kWhPerDay.index.values)
-    if (useRealValues == 1):
+    if (useRealValues == 1 or useRealValues == 2):
         avg = expPR / 100 * GIIdailyReal
 
 
@@ -360,7 +369,14 @@ def createInverterPlots(kWhPerDay,project,projectDateBeginString,projectDateEndS
 
         PR=round(realDailyAvg/GIIdaily*100,1)
 
-        printObject.realDataBoolean = useRealValues
+        printBool = None
+        if (useRealValues == 0):
+            printBool = False
+        if useRealValues == 1:
+            printBool = True
+        if useRealValues == 2:
+            printBool = True
+        printObject.realDataBoolean = printBool
         printObject.invertersPR.append(str(PR))
         printObject.invertersTotalGenerated.append(str(int(round(totalGenerated))))
         printObject.invertersRealDailyAvgKWP.append(str(realDailyAvg))
@@ -412,8 +428,8 @@ def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain
 
 
 def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rain, projectDateBeginString,
-                      projectDateEndString, UsedSolargisData, autoPrint=False, reportType=None):
-
+                      projectDateEndString, UsedSolargisData, autoPrint=False, reportType=None, safeData=True):
+    global SolargisInput
 
         buttonBanner = createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir)
 
@@ -466,7 +482,7 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
         for inverter in project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString).columns:
             color = next(colorPool)
             line = p.line(x=df.index.values,y=df[inverter],color=color)
-            ax1.plot(plotDates,df[inverter],label='Inv '+str(inverterID3),color=color,linewidth='1')
+            ax1.plot(plotDates, df[inverter], label='Inv ' + str(inverterID3 + 1), color=color, linewidth='1')
             inverterID3+=1
             lineLegends.append(('Inv '+str(inverterID3),[line]))
 
@@ -721,23 +737,33 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
         GIIdaily=[]
 
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
-        print('CAVERAGESOLARAGIS', UsedSolargisData)
+
         if (UsedSolargisData == 0):
             GIIdaily=project.getGII(projectDateBeginString,projectDateEndString)
 
         if (UsedSolargisData == 1):
-            GIIdailyReal = project.getRealGII(projectDateBeginString, projectDateEndString, DH)
+            GIIdailyReal = project.getRealGII(projectDateBeginString, projectDateEndString, DH, saveBool=safeData)
             GIIdailyReal = GIIdailyReal['GII']
             GIIdaily=round(GIIdailyReal.mean(),2)
 
 
-        projectAVG = round(expPR*GIIdaily/100,2)
+if (UsedSolargisData == 2):
+    path = SolargisInput.value
+    realExcelGHI = CE.getRealDailyGHIDataFromExcel(path, projectDateBeginString, projectDateEndString)
+    percentage = project.getPercentageChange(projectDateBeginString, projectDateEndString)
+    realGII = (percentage) * realExcelGHI
+    realGII.columns = ['GII']
+    GIIdailyReal = realGII
+    GIIdailyReal = GIIdailyReal['GII']
+    GIIdaily = round(GIIdailyReal.mean(), 2)
+
+    projectAVG = round(expPR*GIIdaily/100,2)
         dfMaxkWh=max(projectAVG*project.totalkWP,dfMaxkWh)
 
 
         yvaluesAVG = [projectAVG*project.totalkWP]*len(yValues)
 
-        if (UsedSolargisData == 1):
+if (UsedSolargisData == 1 or UsedSolargisData == 2):
             projectAVG = expPR/100*GIIdailyReal
             dfMaxkWh=max(projectAVG.max().max()*project.totalkWP,dfMaxkWh)
             p2.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
@@ -755,7 +781,7 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
             ax1.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='black',linewidth='1')
             #ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',linewidth='1')
 
-        if (UsedSolargisData == 1):
+if (UsedSolargisData == 1 or UsedSolargisData == 2):
             yValueskWP=projectAVG
             dfMaxkWhkWP=max(dfMaxkWhkWP,projectAVG.max().max())
         else:
@@ -770,12 +796,12 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
         p2.y_range=Range1d(-0.5, 1.2*dfMaxkWhkWP)
         ExpKWhKWP= p2.line(x=df.index.values,y=yValueskWP,color='lightgreen',line_width=2)
         if(len(plotDates)==1):
-            if (UsedSolargisData == 1):
+            if (UsedSolargisData == 1 or UsedSolargisData == 2):
                 ax1.plot(plotDates,yValueskWP,label='Exp. kWh/kWP',color='lightgreen',marker='o',linewidth='1')
             else:
                 ax1.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',marker='o',linewidth='1')
         else:
-            if (UsedSolargisData == 1):
+            if (UsedSolargisData == 1 or UsedSolargisData == 2):
                 ax1.plot(plotDates,yValueskWP,label='Exp. kWh/kWP',color='lightgreen',linewidth='1')
             else:
                 ax1.plot(plotDates,yValueskWP,label='Exp. Avg. kWh/kWP',color='lightgreen',linewidth='1')
@@ -798,7 +824,7 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
             #lineLegends2.append(('kWh',[kwhLine]))
             #lineLegends2.append(('Exp. Avg. kWh',[ExpAvhKwhLine]))
             lineLegends2.append(('kWh/kWP',[kwhKWPLIne]))
-            if (UsedSolargisData == True):
+            if (UsedSolargisData == 1 or UsedSolargisData == 2):
                 lineLegends2.append(('Exp. kWh/kWP',[ExpKWhKWP]))
             else:
                 lineLegends2.append(('Exp. Avg. kWh/kWP',[ExpKWhKWP]))
@@ -836,7 +862,7 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
 
         totalGenerated = totalkWh
 
-        if (UsedSolargisData == 1):
+if (UsedSolargisData == 1 or UsedSolargisData == 2):
             underperfDays = sum([1 if x<y*project.totalkWP else 0 for (x,y) in zip(yValues,projectAVG)])
             overperfDays = sum([1 if x>=y*project.totalkWP else 0 for (x,y) in zip(yValues,projectAVG)])
 
@@ -850,7 +876,10 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
 
         #GIIdaily= project.getGII(projectDateBeginString,projectDateEndString)
         if (UsedSolargisData == 1):
-            GHIdaily = round(project.realGHI[projectDateBeginString:projectDateEndString].mean(), 2)
+            GHIdaily = round(project.realGHI[projectDateBeginString:projectDateEndString].resample('D').sum().mean(), 2)
+
+if (UsedSolargisData == 2):
+    GHIdaily = round(CE.getRealDailyGHIDataFromExcel(path, projectDateBeginString, projectDateEndString).mean(), 2)
 
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
         expDailyAvg=round(expPR*GIIdaily/100,2)
@@ -898,7 +927,8 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
 
         inverterGraphs =[]
         inverterGraphs.append(
-            createInverterPlots(kWhPerDay, project, projectDateBeginString, projectDateEndString, UsedSolargisData))
+            createInverterPlots(kWhPerDay, project, projectDateBeginString, projectDateEndString, UsedSolargisData,
+                                safeData=safeData))
 
         inverterGraphs= [item for sublist in inverterGraphs for item in sublist]
         inverterGraphs = column(inverterGraphs)
@@ -965,6 +995,7 @@ def conversion(old):
 
 
 def collectData(statusBanner,saveData=False):
+    global SolargisInput
     statusBanner.text = ''
     go=True
     if (os.path.exists(solargisLocation.value)==False):
@@ -973,6 +1004,10 @@ def collectData(statusBanner,saveData=False):
     for inverter in inverterLabels:
         if (os.path.exists(inverter[4].value)==False):
             statusBanner.text=' Inverter file directory does not exist.'
+            go = False
+    if toggleDataChoice.active == 2:
+        if (os.path.exists(SolargisInput.value) == False):
+            statusBanner.text = ' Solargis real excel file does not exist.'
             go = False
 
     if go==True:
@@ -1048,6 +1083,7 @@ def collectData(statusBanner,saveData=False):
 
 
             project = PE.createProject(generalData,geoData,totalData,InverterData,maintancelist,ExtraData,adresData,solargisLocation.value,GHIdf)
+
             if (saveData==True):
                 print('Saving project to database...')
                 DH.saveProject(project)
@@ -1055,22 +1091,28 @@ def collectData(statusBanner,saveData=False):
                 time.sleep(0.5)
                 goToHomescreen()
             else:
-                inputData=(project.name,project.getAllInverterDatafromTo(projectDateBeginString,projectDateEndString))
-
-                try:
+                inputData = (
+                    project.name, project.getAllInverterDatafromTo(projectDateBeginString, projectDateEndString))
+                # try:
+                print('Collecting KWh per day...')
                     kWhPerDay = CE.getkWhPerDay(inputData,[x[6] for x in InverterData])
                     print('KWh per day collected')
+            print('Calculating total kWh...')
                     totalkWh = CE.getTotalkWh(inputData,[x[6] for x in InverterData])
-                    print('Total KWh collected')
+        print('Total kWh collected')
+        print('Collecting cloud data...')
                     cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
                     print('Cloud data collected')
+    print('Collecting rain data...')
                     rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
                     print('Rain data collected')
                     showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rain,
-                                      projectDateBeginString, projectDateEndString, toggleDataChoice.active)
-                except:
-                    print('C_Error: No data found in folder!')
-        else:
+                                      projectDateBeginString, projectDateEndString, toggleDataChoice.active,
+                                      safeData=False)
+    # except:
+    # print('C_Error: No data found in folder! Or data is not in file!')
+
+else:
             statusBanner.text = "C_Error: Project name already in Database!"
 
 
@@ -1126,7 +1168,6 @@ def removeInverterLayout():
     if inverterClickCounter !=0:
 
         inverterClickCounter-=1
-        print('counter',inverterClickCounter)
 
         del oldLayout[13+3*inverterClickCounter]
         del oldLayout[13+3*inverterClickCounter]
@@ -1144,6 +1185,7 @@ def handleSolargisChoice(val, old, newChoice):
     global globNewLayout
     global newLayout
     global insertSolargisRow
+    global SolargisInput
     oldLayout = newLayout
     print('dataSourceChoice', newChoice)
     if (newChoice == 2):

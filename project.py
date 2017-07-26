@@ -174,7 +174,8 @@ class Project(object):
 
     def getRealGHI(self, beginDate, endDate, DH):
         df =CE.getRealGHIData(str(self.projectLatitude),str(self.projectLongitude),str(beginDate),str(endDate),str(self.name),str(self.name).replace(" ", "")[0:4],['GHI'],'HOURLY','false')
-        df = df.resample('D').sum().to_frame()
+        # df = df.resample('D').sum().to_frame()
+        df = df.to_frame()
         oldfDF = self.realGHI
         if (not df.empty):
             returndf = df.merge(oldfDF, left_index=True, right_index=True, how='outer', on=['GHI'])
@@ -187,16 +188,19 @@ class Project(object):
         fileName = str(self.name) + 'Solargis API Data.csv'
         fileName = os.path.join(APIdirectory, str(fileName))
         returndf.to_csv(fileName, sep=';')
-        # TODO save realGHI to csv
+
+        csvData = open(fileName).read()
+        open(fileName, "w").write("#Data:\n" + csvData)
         return self.realGHI
 
     def getRealGHIFromTo(self, beginDate, endDate, DH):
         return self.getRealGHI(beginDate, endDate, DH)[beginDate:endDate]
 
-    def getRealGII(self, beginDate, endDate, DH):
+    def getRealGII(self, beginDate, endDate, DH, saveBool=True):
         percentage = self.getPercentageChange(beginDate,endDate)
-        realGII = (percentage) * self.getRealGHI(beginDate, endDate, DH)
+        realGII = (percentage) * self.getRealGHI(beginDate, endDate, DH).resample('D').sum()
         realGII.columns = ['GII']
         self.realGII = realGII
-        DH.saveProject(self)  # to update GHI and GII
+        if saveBool == True:
+            DH.saveProject(self)  # to update GHI and GII
         return realGII[beginDate:endDate]

@@ -154,3 +154,8 @@ def getRealGHIData(lat,lon,beginDate,EndDate,siteName,id,listOfRequests,samplera
         df=df/1000 #convert Watthour to kiloWatthour
         df.columns = ['GHI']
         return df
+
+
+def getRealDailyGHIDataFromExcel(path, beginDateString, endDateString):
+    df = DL.loadSolargisRealExcel(path)[beginDateString:endDateString].resample('D').sum()
+    return df

@@ -5,6 +5,7 @@ from os import listdir
 from os.path import isfile, join
 import re
 import os
+import csv
 from cStringIO import StringIO
 
 import pandas as pd
@@ -207,3 +208,28 @@ def collectSolargisData(filePath):
     df_PV = df_PV[df_PV.columns[0:endColumn+1]].head(n=endRow)
     return df_GHI,df_GII,df_PV
 
+
+def findDatastart(path):
+    rows = list(csv.reader(open(path, 'r'), delimiter=';'))
+    rows = [[x.lower() for x in l] for l in rows]
+    indices = [i for i, s in enumerate(rows) if '#data:' in s]
+    startRow = indices[0] + 1
+    return startRow
+
+
+def loadSolargisRealExcel(path):
+    start = findDatastart(path)
+    df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(path))), sep=';', encoding='latin1',
+                     parse_dates=True, index_col=0, skiprows=start)
+    try:
+        df.Time = pd.to_timedelta(df.Time + ':00', unit='h')
+        df.index = df.index + df.Time
+        df = df.drop('Time', axis=1)
+        df.index.name = 'Timestamp'
+        df = df[['GHI']]
+    except:
+        print("C_Warning: DataFrame seems to be in the right format, no extra processing is done.")
+    return df
+
+    # print(loadSolargisRealExcel('/Users/christiaan/Desktop/Solcor/outputTést/Nueces Del ChoapaSolargis API Data.csv'))
+    # print(loadSolargisRealExcel('/Users/christiaan/Desktop/SolarGIS_hourly_1_Bratislava_Slovakia_20170101_20170131.csv'))
