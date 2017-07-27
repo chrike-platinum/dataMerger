@@ -433,7 +433,7 @@ def createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain
 
 def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rain, projectDateBeginString,
                       projectDateEndString, UsedSolargisData, autoPrint=False, reportType=None, safeData=True):
-    global SolargisInput
+        global SolargisInput
 
         buttonBanner = createPDFButtonBanner(reportNumber,project,kWhPerDay,totalkWh,cloudData,rain,projectDateBeginString,projectDateEndString,tempPlotDir)
 
@@ -751,25 +751,26 @@ def showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rai
             GIIdaily=round(GIIdailyReal.mean(),2)
 
 
-if (UsedSolargisData == 2):
-    path = SolargisInput.value
-    realExcelGHI = CE.getRealDailyGHIDataFromExcel(path, projectDateBeginString, projectDateEndString)
-    percentage = project.getPercentageChange(projectDateBeginString, projectDateEndString)
-    realGII = (percentage) * realExcelGHI
-    realGII.columns = ['GII']
-    GIIdailyReal = realGII
-    GIIdailyReal = GIIdailyReal['GII']
-    GIIdaily = round(GIIdailyReal.mean(), 2)
+        if (UsedSolargisData == 2):
+            path = SolargisInput.value
+            realExcelGHI = CE.getRealDailyGHIDataFromExcel(path, projectDateBeginString, projectDateEndString)
+            percentage = project.getPercentageChange(projectDateBeginString, projectDateEndString)
+            realGII = (percentage) * realExcelGHI
+            realGII.columns = ['GII']
+            GIIdailyReal = realGII
+            GIIdailyReal = GIIdailyReal['GII']
+            GIIdaily = round(GIIdailyReal.mean(), 2)
 
-projectAVG = round(expPR * GIIdaily / 100, 2)
+        projectAVG = round(expPR * GIIdaily / 100, 2)
         dfMaxkWh=max(projectAVG*project.totalkWP,dfMaxkWh)
         yvaluesAVG = [projectAVG*project.totalkWP]*len(yValues)
 
-if (UsedSolargisData == 1 or UsedSolargisData == 2):
-    projectAVG = expPR / 100 * GIIdailyReal
-    dfMaxkWh = max(projectAVG.max().max() * project.totalkWP, dfMaxkWh)
-    p2.y_range = Range1d(-0.5, 1.2 * dfMaxkWh)
-    yvaluesAVG = projectAVG * project.totalkWP
+        if (UsedSolargisData == 1 or UsedSolargisData == 2):
+            projectAVG = expPR / 100 * GIIdailyReal
+            dfMaxkWh = max(projectAVG.max().max() * project.totalkWP, dfMaxkWh)
+
+        p2.y_range = Range1d(-0.5, 1.2 * dfMaxkWh)
+        yvaluesAVG = projectAVG * project.totalkWP
 
 
         #ExpAvhKwhLine = p2.line(x=df.index.values,y=yvaluesAVG,color='lightblue',line_width=2)
@@ -783,12 +784,12 @@ if (UsedSolargisData == 1 or UsedSolargisData == 2):
             ax1.plot(plotDates, yValues / project.totalkWP, label='kWh/kWP', color='black', linewidth='1')
             #ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',linewidth='1')
 
-if (UsedSolargisData == 1 or UsedSolargisData == 2):
-    yValueskWP = projectAVG
-    dfMaxkWhkWP = max(dfMaxkWhkWP, projectAVG.max().max())
+        if (UsedSolargisData == 1 or UsedSolargisData == 2):
+            yValueskWP = projectAVG
+            dfMaxkWhkWP = max(dfMaxkWhkWP, projectAVG.max().max())
         else:
-    yValueskWP = [projectAVG] * len(yValues)  # [x/project.totalkWP for x in yvaluesAVG]
-    dfMaxkWhkWP = max(dfMaxkWhkWP, projectAVG)
+            yValueskWP = [projectAVG] * len(yValues)  # [x/project.totalkWP for x in yvaluesAVG]
+            dfMaxkWhkWP = max(dfMaxkWhkWP, projectAVG)
 
 
 
@@ -864,7 +865,7 @@ if (UsedSolargisData == 1 or UsedSolargisData == 2):
 
         totalGenerated = totalkWh
 
-if (UsedSolargisData == 1 or UsedSolargisData == 2):
+        if (UsedSolargisData == 1 or UsedSolargisData == 2):
             underperfDays = sum([1 if x<y*project.totalkWP else 0 for (x,y) in zip(yValues,projectAVG)])
             overperfDays = sum([1 if x>=y*project.totalkWP else 0 for (x,y) in zip(yValues,projectAVG)])
 
@@ -880,8 +881,8 @@ if (UsedSolargisData == 1 or UsedSolargisData == 2):
         if (UsedSolargisData == 1):
             GHIdaily = round(project.realGHI[projectDateBeginString:projectDateEndString].resample('D').sum().mean(), 2)
 
-if (UsedSolargisData == 2):
-    GHIdaily = round(CE.getRealDailyGHIDataFromExcel(path, projectDateBeginString, projectDateEndString).mean(), 2)
+        if (UsedSolargisData == 2):
+            GHIdaily = round(CE.getRealDailyGHIDataFromExcel(path, projectDateBeginString, projectDateEndString).mean(), 2)
 
         expPR=round(project.getExpectedPR(projectDateBeginString,projectDateEndString),1)
         expDailyAvg=round(expPR*GIIdaily/100,2)
