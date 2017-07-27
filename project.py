@@ -90,7 +90,13 @@ class Project(object):
 
         for path,col,inverterType in zip(inverterFilePaths,inverterColumnNumbers,inverterTypes):
                 inverter = self.getInverter(i)
-                inverterData = DL.fetchFilesforInverter(path,col-1,inverterType+'-'+str(i),inverter.sampleRate)
+                if ('productionmeter' in inverterType.lower().replace(" ", "")):
+                    inverterData = DL.fetchFilesforProductionMeter(path, inverterType + '-' + str(i),
+                                                                   inverter.sampleRate)
+                else:
+                    inverterData = DL.fetchFilesforInverter(path, col - 1, inverterType + '-' + str(i),
+                                                            inverter.sampleRate)
+
                 inverter.updateInitialInverterData(inverterData)
                 i+=1
 
@@ -181,16 +187,16 @@ class Project(object):
             returndf = df.merge(oldfDF, left_index=True, right_index=True, how='outer', on=['GHI'])
         else:
             returndf = df
-
         self.realGHI = returndf
 
         APIdirectory = DH.getSettings()['API Solargis-output directory']
         fileName = str(self.name) + 'Solargis API Data.csv'
         fileName = os.path.join(APIdirectory, str(fileName))
+        returndf = returndf * 1000  # Save in W/M^2 instead of kW/m^2
         returndf.to_csv(fileName, sep=';')
 
         csvData = open(fileName).read()
-        open(fileName, "w").write("#Data:\n" + csvData)
+        open(fileName, "w").write("#Solcor format\n#unit: [W/m^2]\n#Data:\n" + csvData)
         return self.realGHI
 
     def getRealGHIFromTo(self, beginDate, endDate, DH):

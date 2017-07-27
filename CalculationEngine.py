@@ -141,7 +141,11 @@ def collectSolarisData(path,year):
 
 def updateInverterData(inverter,i):
     df = inverter.inverterData
-    newDf = DL.fetchFilesforInverter(inverter.filePath,inverter.columnNumber-1,str(inverter.type)+'-'+str(i),inverter.sampleRate)
+    if ('productionmeter' in inverter.type.lower().replace(" ", "")):
+        newDf = DL.fetchFilesforProductionMeter(inverter.filePath, inverter.type + '-' + str(i), inverter.sampleRate)
+    else:
+        newDf = DL.fetchFilesforInverter(inverter.filePath, inverter.columnNumber - 1,
+                                         str(inverter.type) + '-' + str(i), inverter.sampleRate)
     if (not newDf.empty):
         returndf = newDf.merge(df,left_index=True,right_index=True,how='outer',on=str(inverter.type)+'-'+str(i))
     else:
@@ -158,4 +162,5 @@ def getRealGHIData(lat,lon,beginDate,EndDate,siteName,id,listOfRequests,samplera
 
 def getRealDailyGHIDataFromExcel(path, beginDateString, endDateString):
     df = DL.loadSolargisRealExcel(path)[beginDateString:endDateString].resample('D').sum()
+    df = df / 1000  # convert Watthour to kiloWatthour
     return df

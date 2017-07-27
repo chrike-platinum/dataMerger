@@ -321,7 +321,11 @@ def createInverterPlots(kWhPerDay, project, projectDateBeginString, projectDateE
 
     minkWP=min(list)
     dfMaxkWh=(kWhPerDay/minkWP).max().max()
-    dfMaxkWh=max(expDailyAvg,dfMaxkWh)
+    if (useRealValues == 1 or useRealValues == 2):
+        maxavg = avg.max()
+        dfMaxkWh = max(maxavg, dfMaxkWh)
+    else:
+        dfMaxkWh = max(expDailyAvg, dfMaxkWh)
 
     p3.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
     ax.set_ylim([-0.5, 1.2*dfMaxkWh])
@@ -757,17 +761,15 @@ if (UsedSolargisData == 2):
     GIIdailyReal = GIIdailyReal['GII']
     GIIdaily = round(GIIdailyReal.mean(), 2)
 
-    projectAVG = round(expPR*GIIdaily/100,2)
+projectAVG = round(expPR * GIIdaily / 100, 2)
         dfMaxkWh=max(projectAVG*project.totalkWP,dfMaxkWh)
-
-
         yvaluesAVG = [projectAVG*project.totalkWP]*len(yValues)
 
 if (UsedSolargisData == 1 or UsedSolargisData == 2):
-            projectAVG = expPR/100*GIIdailyReal
-            dfMaxkWh=max(projectAVG.max().max()*project.totalkWP,dfMaxkWh)
-            p2.y_range=Range1d(-0.5, 1.2*dfMaxkWh)
-            yvaluesAVG = projectAVG*project.totalkWP
+    projectAVG = expPR / 100 * GIIdailyReal
+    dfMaxkWh = max(projectAVG.max().max() * project.totalkWP, dfMaxkWh)
+    p2.y_range = Range1d(-0.5, 1.2 * dfMaxkWh)
+    yvaluesAVG = projectAVG * project.totalkWP
 
 
         #ExpAvhKwhLine = p2.line(x=df.index.values,y=yvaluesAVG,color='lightblue',line_width=2)
@@ -775,18 +777,18 @@ if (UsedSolargisData == 1 or UsedSolargisData == 2):
 
 
         if len(plotDates)==1:
-            ax1.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='black',marker='o',linewidth='1')
-            #ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',marker='o',linewidth='1')
+            ax1.plot(plotDates, yValues / project.totalkWP, label='kWh/kWP', color='black', marker='o', linewidth='1')
+            # ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',marker='o',linewidth='1')
         else:
-            ax1.plot(plotDates,yValues/project.totalkWP,label='kWh/kWP',color='black',linewidth='1')
+            ax1.plot(plotDates, yValues / project.totalkWP, label='kWh/kWP', color='black', linewidth='1')
             #ax1.plot(plotDates,yvaluesAVG,label='Exp. Avg. kWh',color='lightblue',linewidth='1')
 
 if (UsedSolargisData == 1 or UsedSolargisData == 2):
-            yValueskWP=projectAVG
-            dfMaxkWhkWP=max(dfMaxkWhkWP,projectAVG.max().max())
+    yValueskWP = projectAVG
+    dfMaxkWhkWP = max(dfMaxkWhkWP, projectAVG.max().max())
         else:
-            yValueskWP=[projectAVG]*len(yValues)#[x/project.totalkWP for x in yvaluesAVG]
-            dfMaxkWhkWP=max(dfMaxkWhkWP,projectAVG)
+    yValueskWP = [projectAVG] * len(yValues)  # [x/project.totalkWP for x in yvaluesAVG]
+    dfMaxkWhkWP = max(dfMaxkWhkWP, projectAVG)
 
 
 
@@ -996,6 +998,7 @@ def conversion(old):
 
 def collectData(statusBanner,saveData=False):
     global SolargisInput
+    global toggleDataChoice
     statusBanner.text = ''
     go=True
     if (os.path.exists(solargisLocation.value)==False):
@@ -1005,10 +1008,11 @@ def collectData(statusBanner,saveData=False):
         if (os.path.exists(inverter[4].value)==False):
             statusBanner.text=' Inverter file directory does not exist.'
             go = False
-    if toggleDataChoice.active == 2:
-        if (os.path.exists(SolargisInput.value) == False):
-            statusBanner.text = ' Solargis real excel file does not exist.'
-            go = False
+    if (saveData == False):
+        if (toggleDataChoice.active == 2):
+            if (os.path.exists(SolargisInput.value) == False):
+                statusBanner.text = ' Solargis real excel file does not exist.'
+                go = False
 
     if go==True:
 
@@ -1095,24 +1099,25 @@ def collectData(statusBanner,saveData=False):
                     project.name, project.getAllInverterDatafromTo(projectDateBeginString, projectDateEndString))
                 # try:
                 print('Collecting KWh per day...')
-                    kWhPerDay = CE.getkWhPerDay(inputData,[x[6] for x in InverterData])
-                    print('KWh per day collected')
-            print('Calculating total kWh...')
-                    totalkWh = CE.getTotalkWh(inputData,[x[6] for x in InverterData])
-        print('Total kWh collected')
-        print('Collecting cloud data...')
-                    cloudData = CE.returnAverageCloudData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-                    print('Cloud data collected')
-    print('Collecting rain data...')
-                    rain = CE.returnAverageRainData(projectDateBeginString,projectDateEndString,project.projectLatitude,project.projectLongitude)
-                    print('Rain data collected')
-                    showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rain,
+                kWhPerDay = CE.getkWhPerDay(inputData, [x[6] for x in InverterData])
+                print('KWh per day collected')
+                print('Calculating total kWh...')
+                totalkWh = CE.getTotalkWh(inputData, [x[6] for x in InverterData])
+                print('Total kWh collected')
+                print('Collecting cloud data...')
+                cloudData = CE.returnAverageCloudData(projectDateBeginString, projectDateEndString,
+                                                      project.projectLatitude, project.projectLongitude)
+                print('Cloud data collected')
+                print('Collecting rain data...')
+                rain = CE.returnAverageRainData(projectDateBeginString, projectDateEndString, project.projectLatitude,
+                                                project.projectLongitude)
+                print('Rain data collected')
+                showProjectScreen(reportNumber, project, kWhPerDay, totalkWh, cloudData, rain,
                                       projectDateBeginString, projectDateEndString, toggleDataChoice.active,
                                       safeData=False)
-    # except:
-    # print('C_Error: No data found in folder! Or data is not in file!')
-
-else:
+                # except:
+                # print('C_Error: No data found in folder! Or data is not in file!')
+        else:
             statusBanner.text = "C_Error: Project name already in Database!"
 
 
@@ -1627,8 +1632,8 @@ def deleteProjectAndGoBack(project):
 
 
 def deleteProjectScreen(project):
-    headingTxt = Div(text="""<p style="font-size:28px;text-align: center"> Delete: """+str(project.name),
-            width=400, height=30)
+    headingTxt = Div(text="""<p style="font-size:28px;text-align: left"> Delete: """ + str(project.name),
+                     width=800, height=30)
 
     headingdiv = Div(text="""<hr noshade size=4 color=green>""",
         width=400, height=10)
@@ -1851,7 +1856,6 @@ def showManagementScreen(ID):
     headers= list(df)
     popped = headers.pop()
     headers.insert(0,popped)
-    print('headers', headers)
     #a=0
     for columnName in headers:
         # if a==0:

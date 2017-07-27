@@ -56,6 +56,7 @@ def importCSVFile(dataPath,fileName,sampleRate2):
     df=df.dropna(axis=1,how='all')
     ###Extend short dataframes
     dateDF = str(df.index.values[1])[:10]
+    endDateDF = str(df.index.values[-1])[:10]
     if ('.' in str(df.index.values[1])[:10]):
         dateparse = lambda x: pd.datetime.strptime(x, '%d.%m.%Y %H:%M')
         df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(dataPath+'/'+fileName))), sep=';', encoding='latin1',date_parser=dateparse, parse_dates=True,index_col=0,skiprows=start+1)
@@ -209,27 +210,77 @@ def collectSolargisData(filePath):
     return df_GHI,df_GII,df_PV
 
 
-def findDatastart(path):
+def findDatastart(path, keyWord):
     rows = list(csv.reader(open(path, 'r'), delimiter=';'))
     rows = [[x.lower() for x in l] for l in rows]
-    indices = [i for i, s in enumerate(rows) if '#data:' in s]
-    startRow = indices[0] + 1
+    indices = [i for i, s in enumerate(rows) if keyWord in s[0]]
+    try:
+        startRow = indices[0] + 1
+    except:
+        print('C_error could not find keyword to start in datafile')
+        startRow = 0
     return startRow
 
 
 def loadSolargisRealExcel(path):
-    start = findDatastart(path)
+    start = findDatastart(path, '#data:')
     df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(path))), sep=';', encoding='latin1',
                      parse_dates=True, index_col=0, skiprows=start)
     try:
+        if ('.' in str(df.index.values[1])):
+            dateparse = lambda x: pd.datetime.strptime(x, '%d.%m.%Y')
+            df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(path))), sep=';', encoding='latin1',
+                             date_parser=dateparse, parse_dates=True, index_col=0, skiprows=start)
+
         df.Time = pd.to_timedelta(df.Time + ':00', unit='h')
         df.index = df.index + df.Time
         df = df.drop('Time', axis=1)
-        df.index.name = 'Timestamp'
+        df.index.name = 'timestamp'
         df = df[['GHI']]
     except:
-        print("C_Warning: DataFrame seems to be in the right format, no extra processing is done.")
+        print("C_Notification: DataFrame seems to be in the unique Solcor format, no extra processing is done.")
+    print(df)
     return df
 
     # print(loadSolargisRealExcel('/Users/christiaan/Desktop/Solcor/outputTést/Nueces Del ChoapaSolargis API Data.csv'))
     # print(loadSolargisRealExcel('/Users/christiaan/Desktop/SolarGIS_hourly_1_Bratislava_Slovakia_20170101_20170131.csv'))
+
+
+def loadCSVData(path, columnName, sampleRate, delimiter=';'):
+    start = findDatastart(path, 'fecha/hora')
+
+    df = pd.read_csv(StringIO(''.join(l.replace('\t', ';') for l in open(path))), sep=';',
+                     parse_dates=True, index_col=0, skiprows=start - 1, header=0, decimal=",")
+
+
+    # if not(isinstance(df.index,pd.DatetimeIndex)):
+    if delimiter == 'tab':
+        dateparse = lambda x: pd.datetime.strptime(x, '%d-%m-%Y %H:%M')
+        df = pd.read_csv(StringIO(''.join(l.replace('\t', ';') for l in open(path))), sep=';', encoding='latin1',
+                         date_parser=dateparse, parse_dates=True, index_col=0, skiprows=start - 1, header=0,
+                         decimal=",")
+
+    df.columns = [x.lower().replace(' ', '') for x in df.columns]
+    df = df[['+p/kw', '-p/kw']]
+
+    df = df.astype(float).fillna(0.0)
+    df.sort_index(inplace=True)
+    dateDF = str(df.index.values[1])[:10]
+    endDateDF = str(df.index.values[-1])[:10]
+
+    ix = pd.DatetimeIndex(start=dateDF + " 00:00:00", end=endDateDF + " 23:45:00", freq=sampleRate)
+    df = df.resample(sampleRate).mean().ffill().reindex(ix).fillna(0)
+
+    df = df['+p/kw'] + df['-p/kw']
+    df = df.to_frame()
+    df.columns = [columnName]
+
+    return df
+
+
+def fetchFilesforProductionMeter(folderPath, columnName, sampleRate):
+    return loadCSVData(folderPath, columnName, sampleRate)
+
+# loadCSVData('/Users/christiaan/Downloads/20170424 Puratos.LP','15Min',delimiter='tab')
+# loadCSVData('/Users/christiaan/Downloads/20170720 Econut.LP','15Min')
+# loadCSVData('/Users/christiaan/Downloads/Medidor AQ 20170627.LP','15Min')
