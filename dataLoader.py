@@ -52,7 +52,9 @@ def importCSVFile(dataPath,fileName,sampleRate2):
     sampleRate = str(sampleRate2)
     start,dateIncluded,inverterName = searchStartingRowCSV(dataPath,fileName)
 
+
     df = pd.read_csv(StringIO(''.join(l.replace(',', ';') for l in open(dataPath+'/'+fileName))), sep=';', encoding='latin1', parse_dates=True,index_col=0,skiprows=start)
+    df= df._get_numeric_data()
     df=df.dropna(axis=1,how='all')
     ###Extend short dataframes
     dateDF = str(df.index.values[1])[:10]
